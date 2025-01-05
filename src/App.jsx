@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from "react";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
+import Dashboard from "./Dashboard";
+import Conditions from "./Conditions";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const location = useLocation();
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
+    <div className="wrapper">
+      {/* Sidebar */}
+      <aside className="main-sidebar sidebar-dark-primary elevation-4">
+        <a href="#" className="brand-link">
+          <span className="brand-text font-weight-light">SKP Clinic Doctor</span>
         </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <div className="sidebar">
+          <nav className="mt-2">
+            <ul
+              className="nav nav-pills nav-sidebar flex-column"
+              role="menu"
+              data-accordion="false"
+            >
+              <li className="nav-item">
+                <Link
+                  to="/"
+                  className={`nav-link ${
+                    location.pathname === "/" ? "active" : ""
+                  }`}
+                >
+                  <i className="nav-icon fas fa-tachometer-alt"></i>
+                  <p>Dashboard</p>
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/conditions"
+                  className={`nav-link ${
+                    location.pathname === "/conditions" ? "active" : ""
+                  }`}
+                >
+                  <i className="nav-icon fas fa-prescription-bottle-alt"></i>
+                  <p>Conditions & Medicine</p>
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </aside>
+
+      {/* Content Wrapper */}
+      <div className="content-wrapper">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/conditions" element={<Conditions />} />
+        </Routes>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
