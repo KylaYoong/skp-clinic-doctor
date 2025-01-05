@@ -1,19 +1,24 @@
-/* Content Wrapper */
-.content-wrapper {
-  margin-left: 250px;
-  padding: 20px;
+/* Root Container */
+#root {
+  width: 100%;
+  max-width: none; /* Removed width limitation */
+  padding: 0;
+  margin: 0;
+  text-align: left; /* Left-aligned content */
 }
 
-.content-header {
-  background-color: #f4f6f9;
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
+/* Card Styling */
 .card {
-  margin-bottom: 20px;
+  padding: 1rem; /* Reduced padding for compact layout */
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.brand-link {
-  text-decoration: none; /* Removes underline */
+/* Small Box Widgets */
+.small-box {
+  flex: 1; /* Makes widgets responsive */
+  min-width: 200px; /* Ensures a minimum size for smaller screens */
+  margin: 0 10px; /* Space between widgets */
 }

@@ -1,20 +1,42 @@
+/* General Reset */
+body {
+  margin: 0;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background-color: #f4f6f9; /* Light gray background */
+  color: #333; /* Dark text for better readability */
+  display: block; /* Removed flex to prevent unnatural centering */
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.main-sidebar {
+  width: 250px;
+}
+
 /* Content Wrapper */
 .content-wrapper {
-  margin-left: 250px;
+  margin-left: 250px; /* Matches sidebar width */
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Consistent spacing between sections */
 }
 
-.content-header {
-  background-color: #f4f6f9;
-  padding: 15px;
-  margin-bottom: 20px;
+/* Widgets Row */
+.widgets-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 15px; /* Uniform spacing between widgets */
 }
 
-.card {
-  margin-bottom: 20px;
-}
-
-
-.brand-link {
-  text-decoration: none; /* Removes underline */
+/* Patient Table */
+.table-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }

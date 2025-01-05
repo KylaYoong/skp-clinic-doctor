@@ -1,11 +1,7 @@
-// Import the functions you need from the SDKs you need
+// firebase-config.js
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAKMXRkxuF1_bJskyXimDzO3-TfDHneD8c",
   authDomain: "skp-clinic-qms-webapp.firebaseapp.com",
@@ -14,8 +10,8 @@ const firebaseConfig = {
   storageBucket: "skp-clinic-qms-webapp.firebasestorage.app",
   messagingSenderId: "28360845193",
   appId: "1:28360845193:web:6a07ddb2c58964f37de358",
-  measurementId: "G-VQLW7TJ5SB"
+  measurementId: "G-VQLW7TJ5SB",
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
