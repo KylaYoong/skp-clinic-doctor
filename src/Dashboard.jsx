@@ -22,26 +22,22 @@ function DoctorDashboard() {
 
     const fetchTableData = async () => {
       try {
-        // Fetch data from both collections
         const queueSnapshot = await getDocs(collection(db, "queue"));
         const employeesSnapshot = await getDocs(collection(db, "employees"));
 
-        // Map employeeID to employee data
         const employeesMap = {};
         employeesSnapshot.docs.forEach((doc) => {
-          // Get the employee data and ID
           const employeeData = doc.data();
-          const employeeId = employeeData.employeeID; // Use the employeeID field from the data
-          
+          const employeeId = employeeData.employeeID;
+
           employeesMap[employeeId] = {
             name: employeeData.name,
             gender: employeeData.gender,
             dateOfBirth: employeeData.dob,
-            empId: employeeData.employeeID
+            empId: employeeData.employeeID,
           };
         });
 
-        // Map queue data to corresponding employee data
         const patients = queueSnapshot.docs.map((doc) => {
           const queueData = doc.data();
           const employeeId = queueData.employeeID;
@@ -56,9 +52,6 @@ function DoctorDashboard() {
           };
         });
 
-        console.log("Employees Map:", employeesMap);
-        console.log("Processed Patients:", patients);
-        
         setTableData(patients);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -71,50 +64,37 @@ function DoctorDashboard() {
 
   const calculateAge = (dob) => {
     if (!dob) return "N/A";
-  
-    let birthDate;
-    try {
-      // Parse the DOB string in "YYYY-MM-DD" format
-      const [year, month, day] = dob.split("-").map(Number);
-      if (isNaN(year) || isNaN(month) || isNaN(day)) throw new Error("Invalid date format");
-      birthDate = new Date(year, month - 1, day); // Month is 0-indexed
-    } catch (error) {
-      console.error("Error parsing date of birth:", dob, error);
-      return "N/A";
-    }
-  
     const today = new Date();
+    const birthDate = new Date(dob);
     let age = today.getFullYear() - birthDate.getFullYear();
-  
-    // Adjust if the birthday hasn't occurred this year
-    const isBirthdayPassed =
-      today.getMonth() > birthDate.getMonth() ||
-      (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
-  
-    if (!isBirthdayPassed) {
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
-  
-    return age >= 0 && age <= 150 ? age : "N/A"; // Validate age range
-  };  
-  
+    return age;
+  };
 
   const handleConsultation = (patient) => {
     alert(`Consulting with: ${patient.name}`);
   };
 
   return (
-    <div className="content-wrapper">
+    <div className="content-wrapper" style={{ marginLeft: "0", paddingLeft: "0" }}>
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">Welcome to SKP Clinic Doctor</h1>
+          <h1 className="m-0" style={{ marginBottom: "20px" }}>
+            Welcome to SKP Clinic Doctor
+          </h1>
         </div>
       </div>
 
       <section className="content">
         <div className="container-fluid">
-          {/* Widgets */}
-          <div className="row widgets-row">
+          {/* Widgets Row */}
+          <div className="row">
             <div className="col-lg-3 col-6">
               <div className="small-box bg-info">
                 <div className="inner">
@@ -149,7 +129,7 @@ function DoctorDashboard() {
             </div>
           </div>
 
-          {/* Patient Table */}
+          {/* Patient Table Section */}
           <div className="row mt-4">
             <div className="col-12">
               <div className="card">
