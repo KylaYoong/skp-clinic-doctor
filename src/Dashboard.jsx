@@ -52,21 +52,33 @@ function DoctorDashboard() {
           };
         });
 
-        const patients = queueSnapshot.docs.map((doc) => {
-          const queueData = doc.data();
-          const empData = employeesMap[queueData.employeeID] || {};
-          return {
-            id: doc.id,
-            queueNo: queueData.queueNumber || "N/A",
-            name: empData.name || "N/A",
-            empId: empData.empId || "N/A",
-            gender: empData.gender || "N/A",
-            age: calculateAge(empData.dateOfBirth),
-            timeIn: queueData.timeIn || null,
-            timeOut: queueData.timeOut || null,
-            status: queueData.status || "Waiting",
-          };
-        });
+        const patients = queueSnapshot.docs
+          .filter((doc) => {
+            const queueData = doc.data();
+            const timestamp = queueData.timestamp?.toDate(); // Convert Firestore timestamp to JS Date
+            const today = new Date();
+            return (
+              timestamp &&
+              timestamp.getDate() === today.getDate() &&
+              timestamp.getMonth() === today.getMonth() &&
+              timestamp.getFullYear() === today.getFullYear()
+            );
+          })
+          .map((doc) => {
+            const queueData = doc.data();
+            const empData = employeesMap[queueData.employeeID] || {};
+            return {
+              id: doc.id,
+              queueNo: queueData.queueNumber || "N/A",
+              name: empData.name || "N/A",
+              empId: empData.empId || "N/A",
+              gender: empData.gender || "N/A",
+              age: calculateAge(empData.dateOfBirth),
+              timeIn: queueData.timeIn || null,
+              timeOut: queueData.timeOut || null,
+              status: queueData.status || "Waiting",
+            };
+          });
 
         setTableData(patients);
       } catch (error) {
@@ -74,8 +86,19 @@ function DoctorDashboard() {
       }
     };
 
+    // Initial fetch
     fetchStats();
     fetchTableData();
+
+    // Set up daily refresh
+    const intervalId = setInterval(() => {
+      console.log("Refreshing patient list...");
+      fetchStats();
+      fetchTableData();
+    }, 86400000); // 24 hours in milliseconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   // Calculate patient's age based on DOB
