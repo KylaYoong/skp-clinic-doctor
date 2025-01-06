@@ -264,35 +264,54 @@ function DoctorDashboard() {
         <div className="container-fluid">
           {/* Widgets Row */}
           <div className="row">
+            {/* New Patients Widget */}
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-info">
+              <div className="small-box" style={{ backgroundColor: "#17a2b8", color: "#fff" }}>
                 <div className="inner">
                   <h3>{stats.newPatients}</h3>
                   <p>New Patients</p>
                 </div>
+                <div className="icon">
+                  <i className="fas fa-user-plus"></i> {/* New Patient Icon */}
+                </div>
               </div>
             </div>
+
+            {/* Completed Appointments Widget */}
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-success">
+              <div className="small-box" style={{ backgroundColor: "#28a745", color: "#fff" }}>
                 <div className="inner">
                   <h3>{stats.completedAppointments}</h3>
-                  <p>Completed Appointments</p>
+                  <p>Completed</p>
+                </div>
+                <div className="icon">
+                  <i className="fas fa-check-circle"></i> {/* Completed Icon */}
                 </div>
               </div>
             </div>
+
+            {/* Pending Appointments Widget */}
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-warning">
+              <div className="small-box bg-warning"> {/* Retain bg-warning */}
                 <div className="inner">
                   <h3>{stats.pendingAppointments}</h3>
-                  <p>Pending Appointments</p>
+                  <p>Pending Patients</p>
+                </div>
+                <div className="icon">
+                  <i className="fas fa-clock"></i> {/* Pending Icon */}
                 </div>
               </div>
             </div>
+
+            {/* Average Waiting Time Widget */}
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-secondary">
+              <div className="small-box bg-secondary"> {/* Retain bg-secondary */}
                 <div className="inner">
                   <h3>{stats.avgWaitingTime}</h3>
                   <p>Average Waiting Time</p>
+                </div>
+                <div className="icon">
+                  <i className="fas fa-hourglass-half"></i> {/* Average Time Icon */}
                 </div>
               </div>
             </div>

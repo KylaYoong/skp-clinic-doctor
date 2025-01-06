@@ -55,5 +55,24 @@ border-color: #138496;
     padding-left: 0;
   }
   
-  /* Add more styles as needed */
+  .small-box.bg-info {
+    background-color: #17a2b8; /* Teal */
+    color: #fff; /* White text */
+}
+
+.small-box.bg-success {
+    background-color: #28a745; /* Green */
+    color: #fff; /* White text */
+}
+
+.small-box.bg-warning {
+    background-color: #ffc107; /* Yellow */
+    color: #212529; /* Dark text */
+}
+
+.small-box.bg-secondary {
+    background-color: #6c757d; /* Gray */
+    color: #fff; /* White text */
+}
+
   
