@@ -9,6 +9,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds */
+    z-index: 1000;
   }
   
   .popup-content {

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "./firebase-config";
-import "./Dashboard.css"; // Ensure this file styles match the original layout
+import "./Dashboard.css"; // CSS for maintaining the original layout
 
 function DoctorDashboard() {
-  const [tableData, setTableData] = useState([]);
+  const [tableData, setTableData] = useState([]); // Patient data
   const [stats, setStats] = useState({
     newPatients: 0,
     completedAppointments: 0,
@@ -12,26 +12,27 @@ function DoctorDashboard() {
     avgWaitingTime: "0 min",
   });
 
-  const [popupPatient, setPopupPatient] = useState(null);
-  const [diagnosisList, setDiagnosisList] = useState([
+  const [popupPatient, setPopupPatient] = useState(null); // Current patient in the popup
+  const [diagnosisList] = useState([
     "Common Cold",
     "Flu",
     "Back Pain",
     "Migraine",
-  ]);
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState("");
-  const [additionalNotes, setAdditionalNotes] = useState("");
-  const [mcYes, setMcYes] = useState(false);
-  const [mcDates, setMcDates] = useState({ start: "", end: "" });
-  const [mcAmount, setMcAmount] = useState("");
-  const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]);
+  ]); // Predefined list of diagnoses
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState(""); // Selected diagnosis
+  const [additionalNotes, setAdditionalNotes] = useState(""); // Notes from the doctor
+  const [mcYes, setMcYes] = useState(false); // MC selection
+  const [mcDates, setMcDates] = useState({ start: "", end: "" }); // MC dates
+  const [mcAmount, setMcAmount] = useState(""); // MC amount
+  const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
+
 
   useEffect(() => {
+    // Fetch statistics and patient data on component load
     const fetchStats = async () => {
       const statsSnapshot = await getDocs(collection(db, "stats"));
       if (!statsSnapshot.empty) {
-        const statsData = statsSnapshot.docs[0].data();
-        setStats(statsData);
+        setStats(statsSnapshot.docs[0].data());
       }
     };
 
@@ -42,24 +43,20 @@ function DoctorDashboard() {
 
         const employeesMap = {};
         employeesSnapshot.docs.forEach((doc) => {
-          const employeeData = doc.data();
-          const employeeId = employeeData.employeeID;
-
-          employeesMap[employeeId] = {
-            name: employeeData.name,
-            gender: employeeData.gender,
-            dateOfBirth: employeeData.dob,
-            empId: employeeData.employeeID,
+          const data = doc.data();
+          employeesMap[data.employeeID] = {
+            name: data.name,
+            gender: data.gender,
+            dateOfBirth: data.dob,
+            empId: data.employeeID,
           };
         });
 
         const patients = queueSnapshot.docs.map((doc) => {
           const queueData = doc.data();
-          const employeeId = queueData.employeeID;
-          const empData = employeesMap[employeeId] || {};
-
+          const empData = employeesMap[queueData.employeeID] || {};
           return {
-            id: doc.id, // Firebase document ID for updates
+            id: doc.id,
             queueNo: queueData.queueNumber || "N/A",
             name: empData.name || "N/A",
             empId: empData.empId || "N/A",
@@ -67,7 +64,7 @@ function DoctorDashboard() {
             age: calculateAge(empData.dateOfBirth),
             timeIn: queueData.timeIn || null,
             timeOut: queueData.timeOut || null,
-            status: "Waiting", // Default status
+            status: queueData.status || "Waiting",
           };
         });
 
@@ -81,52 +78,51 @@ function DoctorDashboard() {
     fetchTableData();
   }, []);
 
+  // Calculate patient's age based on DOB
   const calculateAge = (dob) => {
     if (!dob) return "N/A";
     const today = new Date();
     const birthDate = new Date(dob);
     let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDifference = today.getMonth() - birthDate.getMonth();
     if (
-      monthDifference < 0 ||
-      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+      today.getMonth() < birthDate.getMonth() ||
+      (today.getMonth() === birthDate.getMonth() &&
+        today.getDate() < birthDate.getDate())
     ) {
       age--;
     }
     return age;
   };
 
+  // Mark patient's time-in
   const handleTimeIn = async (patient) => {
     const now = new Date().toLocaleTimeString();
     try {
       const patientDoc = doc(db, "queue", patient.id);
       await updateDoc(patientDoc, { timeIn: now });
-      setTableData((prevData) =>
-        prevData.map((item) =>
-          item.id === patient.id ? { ...item, timeIn: now } : item
-        )
+      setTableData((prev) =>
+        prev.map((item) => (item.id === patient.id ? { ...item, timeIn: now } : item))
       );
     } catch (error) {
       console.error("Error updating Time In:", error);
     }
   };
 
+  // Mark patient's time-out
   const handleTimeOut = async (patient) => {
     const now = new Date().toLocaleTimeString();
     try {
       const patientDoc = doc(db, "queue", patient.id);
       await updateDoc(patientDoc, { timeOut: now });
-      setTableData((prevData) =>
-        prevData.map((item) =>
-          item.id === patient.id ? { ...item, timeOut: now } : item
-        )
+      setTableData((prev) =>
+        prev.map((item) => (item.id === patient.id ? { ...item, timeOut: now } : item))
       );
     } catch (error) {
       console.error("Error updating Time Out:", error);
     }
   };
 
-
+  // Save consultation details
   const handleSave = async () => {
     if (!popupPatient) return;
 
@@ -140,11 +136,10 @@ function DoctorDashboard() {
 
     try {
       const patientDoc = doc(db, "queue", popupPatient.id);
-      await updateDoc(patientDoc, { consultationData: dataToSave });
+      await updateDoc(patientDoc, { consultationData: dataToSave, status: "Completed" });
 
-      // Update status to Completed
-      setTableData((prevData) =>
-        prevData.map((item) =>
+      setTableData((prev) =>
+        prev.map((item) =>
           item.id === popupPatient.id ? { ...item, status: "Completed" } : item
         )
       );
@@ -155,6 +150,7 @@ function DoctorDashboard() {
     }
   };
 
+  // Close the consultation popup
   const closePopup = () => {
     setPopupPatient(null);
     setSelectedDiagnosis("");
@@ -165,24 +161,41 @@ function DoctorDashboard() {
     setMedicines([{ name: "", dosage: "" }]);
   };
 
+  // Add a new medicine field
   const handleAddMedicine = () => {
     setMedicines([...medicines, { name: "", dosage: "" }]);
   };
 
+  // Remove a medicine field
   const handleRemoveMedicine = (index) => {
-    const updatedMedicines = medicines.filter((_, i) => i !== index);
-    setMedicines(updatedMedicines);
+    setMedicines((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Update medicine details
   const handleMedicineChange = (index, field, value) => {
-    const updatedMedicines = medicines.map((med, i) =>
-      i === index ? { ...med, [field]: value } : med
+    setMedicines((prev) =>
+      prev.map((med, i) => (i === index ? { ...med, [field]: value } : med))
     );
-    setMedicines(updatedMedicines);
   };
 
-
+  // Mark patient as Completed using the tick icon
+  const handleTick = async (patient) => {
+    try {
+      const patientDoc = doc(db, "queue", patient.id);
+      await updateDoc(patientDoc, { status: "Completed" });
+      setTableData((prev) =>
+        prev.map((item) =>
+          item.id === patient.id ? { ...item, status: "Completed" } : item
+        )
+      );
+    } catch (error) {
+      console.error("Error marking patient as Completed:", error);
+    }
+  };
+  
+  
   return (
+    // must have this style={{ marginLeft: "0", paddingLeft: "0" }} to remain original layout
     <div className="content-wrapper" style={{ marginLeft: "0", paddingLeft: "0" }}>
       <div className="content-header">
         <div className="container-fluid">
@@ -192,6 +205,7 @@ function DoctorDashboard() {
         </div>
       </div>
 
+      {/* Statistics Section */}
       <section className="content">
         <div className="container-fluid">
           {/* Widgets Row */}
@@ -246,7 +260,8 @@ function DoctorDashboard() {
                         <th>Emp ID</th>
                         <th>Gender</th>
                         <th>Age</th>
-                        <th>Consultation</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -257,6 +272,7 @@ function DoctorDashboard() {
                           <td>{row.empId}</td>
                           <td>{row.gender}</td>
                           <td>{row.age}</td>
+                          <td>{row.status}</td>
                           <td>
                             {row.timeIn ? (
                               <span className="text-success">{`In: ${row.timeIn}`}</span>
@@ -278,13 +294,20 @@ function DoctorDashboard() {
                                 Time Out
                               </button>
                             )}
-                            
-                            <button button
-                              className="btn btn-primary btn-sm"
+                            <button
+                              className="btn btn-primary btn-sm ml-2"
                               onClick={() => setPopupPatient(row)}
                             >
                               Consult
                             </button>
+                            {row.status !== "Completed" && (
+                              <button
+                                className="btn btn-success btn-sm ml-2"
+                                onClick={() => handleTick(row)}
+                              >
+                                ✓
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -305,7 +328,7 @@ function DoctorDashboard() {
             <p>
               You are consulting with: <strong>{popupPatient.name}</strong>
             </p>
-
+            {/* Diagnosis */}
             <div className="form-group">
               <label>Diagnosis:</label>
               <select
@@ -324,6 +347,7 @@ function DoctorDashboard() {
               </select>
             </div>
 
+            {/* Medicines */}
             <div className="form-group">
               <label>Medicines:</label>
               {medicines.map((med, index) => (
@@ -362,6 +386,7 @@ function DoctorDashboard() {
               </button>
             </div>
 
+            {/* Additional Notes */}
             <div className="form-group">
               <label>Additional Notes:</label>
               <textarea
@@ -373,6 +398,7 @@ function DoctorDashboard() {
               />
             </div>
 
+            {/* MC */}
             <div className="form-group">
               <label>MC:</label>
               <div>
@@ -391,6 +417,7 @@ function DoctorDashboard() {
               </div>
             </div>
 
+            {/* MC Dates */}
             {mcYes && (
               <div className="form-group">
                 <label>Start Date:</label>
@@ -414,6 +441,7 @@ function DoctorDashboard() {
               </div>
             )}
 
+            {/* Amount */}
             <div className="form-group">
               <label>Amount:</label>
               <input
@@ -424,6 +452,7 @@ function DoctorDashboard() {
               />
             </div>
 
+            {/* Save and Close Buttons */}
             <button className="btn btn-primary mt-3" onClick={handleSave}>
               Save
             </button>
