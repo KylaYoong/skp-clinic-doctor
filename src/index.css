@@ -22,7 +22,7 @@ body {
 
 /* Ensure container alignment for consistent layout */
 .container-fluid {
-  padding: 0; /* Remove container padding for snug fit */
+  padding: 7px; /* Remove container padding for snug fit */
 }
 
 
