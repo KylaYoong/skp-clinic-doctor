@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "./firebase-config";
-import "./Dashboard.css"; // Ensure this file styles match the original layout
+import "./Dashboard.css"; // Import CSS for styling
 
 function DoctorDashboard() {
   const [tableData, setTableData] = useState([]);
@@ -13,6 +13,15 @@ function DoctorDashboard() {
   });
 
   const [popupPatient, setPopupPatient] = useState(null);
+  const [diagnosisList, setDiagnosisList] = useState([
+    "Common Cold",
+    "Flu",
+    "Back Pain",
+    "Migraine",
+  ]);
+  const [mcYes, setMcYes] = useState(false);
+  const [mcDates, setMcDates] = useState({ start: "", end: "" });
+  const [mcAmount, setMcAmount] = useState("");
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -38,6 +47,7 @@ function DoctorDashboard() {
             gender: employeeData.gender,
             dateOfBirth: employeeData.dob,
             empId: employeeData.employeeID,
+            status: "Pending",
           };
         });
 
@@ -47,14 +57,14 @@ function DoctorDashboard() {
           const empData = employeesMap[employeeId] || {};
 
           return {
-            id: doc.id, // Firebase document ID for updates
             queueNo: queueData.queueNumber || "N/A",
             name: empData.name || "N/A",
             empId: empData.empId || "N/A",
             gender: empData.gender || "N/A",
             age: calculateAge(empData.dateOfBirth),
-            timeIn: queueData.timeIn || null,
-            timeOut: queueData.timeOut || null,
+            status: empData.status,
+            timeIn: null,
+            timeOut: null,
           };
         });
 
@@ -66,6 +76,10 @@ function DoctorDashboard() {
 
     fetchStats();
     fetchTableData();
+
+    // Set up daily refresh
+    const refreshInterval = setInterval(fetchTableData, 24 * 60 * 60 * 1000); // Refresh every 24 hours
+    return () => clearInterval(refreshInterval); // Cleanup interval on unmount
   }, []);
 
   const calculateAge = (dob) => {
@@ -83,57 +97,55 @@ function DoctorDashboard() {
     return age;
   };
 
-  const handleTimeIn = async (patient) => {
+  const handleTimeIn = (index) => {
     const now = new Date().toLocaleTimeString();
-    try {
-      const patientDoc = doc(db, "queue", patient.id);
-      await updateDoc(patientDoc, { timeIn: now });
-      setTableData((prevData) =>
-        prevData.map((item) =>
-          item.id === patient.id ? { ...item, timeIn: now } : item
-        )
-      );
-    } catch (error) {
-      console.error("Error updating Time In:", error);
-    }
+    setTableData((prevData) =>
+      prevData.map((item, idx) =>
+        idx === index ? { ...item, timeIn: now } : item
+      )
+    );
   };
 
-  const handleTimeOut = async (patient) => {
+  const handleTimeOut = (index) => {
     const now = new Date().toLocaleTimeString();
-    try {
-      const patientDoc = doc(db, "queue", patient.id);
-      await updateDoc(patientDoc, { timeOut: now });
-      setTableData((prevData) =>
-        prevData.map((item) =>
-          item.id === patient.id ? { ...item, timeOut: now } : item
-        )
-      );
-    } catch (error) {
-      console.error("Error updating Time Out:", error);
-    }
+    setTableData((prevData) =>
+      prevData.map((item, idx) =>
+        idx === index ? { ...item, timeOut: now } : item
+      )
+    );
   };
 
   const handleConsultation = (patient) => {
     setPopupPatient(patient);
+    setMcYes(false);
+    setMcDates({ start: "", end: "" });
+    setMcAmount("");
   };
 
   const closePopup = () => {
     setPopupPatient(null);
   };
 
+  const addDiagnosis = (newDiagnosis) => {
+    if (newDiagnosis && !diagnosisList.includes(newDiagnosis)) {
+      setDiagnosisList((prev) => [...prev, newDiagnosis]);
+    }
+  };
+
+  const deleteDiagnosis = (diagnosis) => {
+    setDiagnosisList((prev) => prev.filter((item) => item !== diagnosis));
+  };
+
   return (
-    <div className="content-wrapper" style={{ marginLeft: "0", paddingLeft: "0" }}>
+    <div className="content-wrapper">
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0" style={{ marginBottom: "20px" }}>
-            Welcome to SKP Clinic Doctor
-          </h1>
+          <h1 className="m-0">Welcome to SKP Clinic Doctor</h1>
         </div>
       </div>
 
       <section className="content">
         <div className="container-fluid">
-          {/* Widgets Row */}
           <div className="row">
             <div className="col-lg-3 col-6">
               <div className="small-box bg-info">
@@ -169,7 +181,6 @@ function DoctorDashboard() {
             </div>
           </div>
 
-          {/* Patient Table Section */}
           <div className="row mt-4">
             <div className="col-12">
               <div className="card">
@@ -180,45 +191,56 @@ function DoctorDashboard() {
                   <table className="table table-hover">
                     <thead>
                       <tr>
-                        <th>Queue No.</th>
-                        <th>Name</th>
-                        <th>Emp ID</th>
-                        <th>Gender</th>
-                        <th>Age</th>
-                        <th>Consultation</th>
+                        <th style={{ width: "8%" }}>Queue No.</th>
+                        <th style={{ width: "15%" }}>Name</th>
+                        <th style={{ width: "10%" }}>Emp ID</th>
+                        <th style={{ width: "10%" }}>Gender</th>
+                        <th style={{ width: "7%" }}>Age</th>
+                        <th style={{ width: "10%" }}>Status</th>
+                        <th style={{ width: "30%" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {tableData.map((row) => (
-                        <tr key={row.id}>
+                      {tableData.map((row, index) => (
+                        <tr key={index}>
                           <td>{row.queueNo}</td>
                           <td>{row.name}</td>
                           <td>{row.empId}</td>
                           <td>{row.gender}</td>
                           <td>{row.age}</td>
                           <td>
-                            {row.timeIn ? (
-                              <span className="text-success">{`In: ${row.timeIn}`}</span>
-                            ) : (
-                              <button
-                                className="btn btn-info btn-sm"
-                                onClick={() => handleTimeIn(row)}
-                              >
-                                Time In
-                              </button>
-                            )}
-                            {row.timeOut ? (
-                              <span className="text-danger ml-2">{`Out: ${row.timeOut}`}</span>
-                            ) : (
-                              <button
-                                className="btn btn-secondary btn-sm ml-2"
-                                onClick={() => handleTimeOut(row)}
-                              >
-                                Time Out
-                              </button>
-                            )}
+                            <select
+                              value={row.status}
+                              onChange={(e) =>
+                                setTableData((prevData) =>
+                                  prevData.map((item, idx) =>
+                                    idx === index
+                                      ? { ...item, status: e.target.value }
+                                      : item
+                                  )
+                                )
+                              }
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Consulted">Consulted</option>
+                              <option value="Completed">Completed</option>
+                            </select>
+                          </td>
+                          <td>
                             <button
-                              className="btn btn-primary btn-sm ml-2"
+                              className="btn btn-info btn-sm"
+                              onClick={() => handleTimeIn(index)}
+                            >
+                              Time In
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm mx-2"
+                              onClick={() => handleTimeOut(index)}
+                            >
+                              Time Out
+                            </button>
+                            <button
+                              className="btn btn-primary btn-sm"
                               onClick={() => handleConsultation(row)}
                             >
                               Consult
@@ -235,7 +257,6 @@ function DoctorDashboard() {
         </div>
       </section>
 
-      {/* Popup Window */}
       {popupPatient && (
         <div className="popup">
           <div className="popup-content">
@@ -243,6 +264,72 @@ function DoctorDashboard() {
             <p>
               You are consulting with: <strong>{popupPatient.name}</strong>
             </p>
+
+            <div>
+              <label>Diagnosis:</label>
+              <select>
+                {diagnosisList.map((diag, index) => (
+                  <option key={index}>{diag}</option>
+                ))}
+              </select>
+              <button
+                onClick={() =>
+                  addDiagnosis(prompt("Enter new diagnosis:"))
+                }
+              >
+                Add
+              </button>
+              <button
+                onClick={() =>
+                  deleteDiagnosis(prompt("Enter diagnosis to delete:"))
+                }
+              >
+                Delete
+              </button>
+            </div>
+
+            <div>
+              <label>Additional Notes:</label>
+              <textarea
+                rows="3"
+                style={{ width: "100%" }}
+                placeholder="Enter any notes here..."
+              />
+            </div>
+
+            <div>
+              <label>MC:</label>
+              <button onClick={() => setMcYes(true)}>Yes</button>
+              <button onClick={() => setMcYes(false)}>No</button>
+            </div>
+
+            {mcYes && (
+              <div>
+                <label>Start Date:</label>
+                <input
+                  type="date"
+                  value={mcDates.start}
+                  onChange={(e) =>
+                    setMcDates((prev) => ({ ...prev, start: e.target.value }))
+                  }
+                />
+                <label>End Date:</label>
+                <input
+                  type="date"
+                  value={mcDates.end}
+                  onChange={(e) =>
+                    setMcDates((prev) => ({ ...prev, end: e.target.value }))
+                  }
+                />
+                <label>Amount:</label>
+                <input
+                  type="number"
+                  value={mcAmount}
+                  onChange={(e) => setMcAmount(e.target.value)}
+                />
+              </div>
+            )}
+
             <button className="btn btn-secondary" onClick={closePopup}>
               Close
             </button>
