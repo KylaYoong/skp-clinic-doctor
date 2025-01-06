@@ -13,6 +13,18 @@ function DoctorDashboard() {
   });
 
   const [popupPatient, setPopupPatient] = useState(null);
+  const [diagnosisList, setDiagnosisList] = useState([
+    "Common Cold",
+    "Flu",
+    "Back Pain",
+    "Migraine",
+  ]);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [mcYes, setMcYes] = useState(false);
+  const [mcDates, setMcDates] = useState({ start: "", end: "" });
+  const [mcAmount, setMcAmount] = useState("");
+  const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -55,6 +67,7 @@ function DoctorDashboard() {
             age: calculateAge(empData.dateOfBirth),
             timeIn: queueData.timeIn || null,
             timeOut: queueData.timeOut || null,
+            status: "Waiting", // Default status
           };
         });
 
@@ -113,13 +126,61 @@ function DoctorDashboard() {
     }
   };
 
-  const handleConsultation = (patient) => {
-    setPopupPatient(patient);
+
+  const handleSave = async () => {
+    if (!popupPatient) return;
+
+    const dataToSave = {
+      diagnosis: selectedDiagnosis,
+      notes: additionalNotes,
+      mc: mcYes ? { start: mcDates.start, end: mcDates.end } : null,
+      amount: mcAmount,
+      medicines,
+    };
+
+    try {
+      const patientDoc = doc(db, "queue", popupPatient.id);
+      await updateDoc(patientDoc, { consultationData: dataToSave });
+
+      // Update status to Completed
+      setTableData((prevData) =>
+        prevData.map((item) =>
+          item.id === popupPatient.id ? { ...item, status: "Completed" } : item
+        )
+      );
+
+      closePopup();
+    } catch (error) {
+      console.error("Error saving consultation data:", error);
+    }
   };
 
   const closePopup = () => {
     setPopupPatient(null);
+    setSelectedDiagnosis("");
+    setAdditionalNotes("");
+    setMcYes(false);
+    setMcDates({ start: "", end: "" });
+    setMcAmount("");
+    setMedicines([{ name: "", dosage: "" }]);
   };
+
+  const handleAddMedicine = () => {
+    setMedicines([...medicines, { name: "", dosage: "" }]);
+  };
+
+  const handleRemoveMedicine = (index) => {
+    const updatedMedicines = medicines.filter((_, i) => i !== index);
+    setMedicines(updatedMedicines);
+  };
+
+  const handleMedicineChange = (index, field, value) => {
+    const updatedMedicines = medicines.map((med, i) =>
+      i === index ? { ...med, [field]: value } : med
+    );
+    setMedicines(updatedMedicines);
+  };
+
 
   return (
     <div className="content-wrapper" style={{ marginLeft: "0", paddingLeft: "0" }}>
@@ -217,9 +278,10 @@ function DoctorDashboard() {
                                 Time Out
                               </button>
                             )}
-                            <button
-                              className="btn btn-primary btn-sm ml-2"
-                              onClick={() => handleConsultation(row)}
+                            
+                            <button button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => setPopupPatient(row)}
                             >
                               Consult
                             </button>
@@ -243,7 +305,129 @@ function DoctorDashboard() {
             <p>
               You are consulting with: <strong>{popupPatient.name}</strong>
             </p>
-            <button className="btn btn-secondary" onClick={closePopup}>
+
+            <div className="form-group">
+              <label>Diagnosis:</label>
+              <select
+                value={selectedDiagnosis}
+                onChange={(e) => setSelectedDiagnosis(e.target.value)}
+                className="form-control"
+              >
+                <option value="" disabled>
+                  Select Diagnosis
+                </option>
+                {diagnosisList.map((diag, index) => (
+                  <option key={index} value={diag}>
+                    {diag}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Medicines:</label>
+              {medicines.map((med, index) => (
+                <div key={index} className="d-flex mb-2">
+                  <input
+                    type="text"
+                    placeholder="Medicine Name"
+                    value={med.name}
+                    onChange={(e) =>
+                      handleMedicineChange(index, "name", e.target.value)
+                    }
+                    className="form-control mr-2"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Dosage"
+                    value={med.dosage}
+                    onChange={(e) =>
+                      handleMedicineChange(index, "dosage", e.target.value)
+                    }
+                    className="form-control mr-2"
+                  />
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleRemoveMedicine(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleAddMedicine}
+              >
+                Add Medicine
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label>Additional Notes:</label>
+              <textarea
+                rows="3"
+                className="form-control"
+                placeholder="Enter any notes here..."
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>MC:</label>
+              <div>
+                <button
+                  className={`btn ${mcYes ? "btn-success" : "btn-light"} mr-2`}
+                  onClick={() => setMcYes(true)}
+                >
+                  Yes
+                </button>
+                <button
+                  className={`btn ${!mcYes ? "btn-success" : "btn-light"}`}
+                  onClick={() => setMcYes(false)}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            {mcYes && (
+              <div className="form-group">
+                <label>Start Date:</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={mcDates.start}
+                  onChange={(e) =>
+                    setMcDates((prev) => ({ ...prev, start: e.target.value }))
+                  }
+                />
+                <label>End Date:</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={mcDates.end}
+                  onChange={(e) =>
+                    setMcDates((prev) => ({ ...prev, end: e.target.value }))
+                  }
+                />
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>Amount:</label>
+              <input
+                type="number"
+                className="form-control"
+                value={mcAmount}
+                onChange={(e) => setMcAmount(e.target.value)}
+              />
+            </div>
+
+            <button className="btn btn-primary mt-3" onClick={handleSave}>
+              Save
+            </button>
+            <button className="btn btn-secondary mt-3 ml-2" onClick={closePopup}>
               Close
             </button>
           </div>
