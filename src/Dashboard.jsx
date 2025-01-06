@@ -101,6 +101,37 @@ function DoctorDashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
+  const handleCallNextPatient = async () => {
+    // Find the next patient in the queue with status "Waiting"
+    const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
+  
+    if (!nextPatient) {
+      alert("No patients are waiting.");
+      return;
+    }
+  
+    try {
+      // Update the patient's status in Firestore
+      const patientDoc = doc(db, "queue", nextPatient.id);
+      await updateDoc(patientDoc, { status: "In Consultation" });
+  
+      // Update the local state to reflect the change
+      setTableData((prev) =>
+        prev.map((item) =>
+          item.id === nextPatient.id
+            ? { ...item, status: "In Consultation" }
+            : item
+        )
+      );
+  
+      alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
+    } catch (error) {
+      console.error("Error updating patient status:", error);
+      alert("Failed to update the next patient's status. Please try again.");
+    }
+  };
+  
+
   // Calculate patient's age based on DOB
   const calculateAge = (dob) => {
     if (!dob) return "N/A";
@@ -271,10 +302,22 @@ function DoctorDashboard() {
           <div className="row mt-4">
             <div className="col-12">
               <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Patient List</h3>
+              <div className="card-header d-flex justify-content-between align-items-center">
+              <h3 className="card-title" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+                Patient List
+              </h3>
+                <div style={{ flex: "1", textAlign: "right" }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleCallNextPatient}
+                  >
+                    Call Next Patient
+                  </button>
                 </div>
+              </div>
+
                 <div className="card-body table-responsive">
+
                   <table className="table table-hover">
                     <thead>
                       <tr>
@@ -285,13 +328,13 @@ function DoctorDashboard() {
                         <th>Age</th>
                         <th>Status</th>
                         <th>Actions</th> */}
-                        <th style={{ width: "9%" }}>Queue No.</th>
-                        <th style={{ width: "20%" }}>Name</th>
-                        <th style={{ width: "8%" }}>Emp ID</th>
-                        <th style={{ width: "8%" }}>Gender</th>
-                        <th style={{ width: "7%" }}>Age</th>
-                        <th style={{ width: "8%" }}>Status</th>
-                        <th style={{ width: "26%" }}>Actions</th>
+                        <th style={{ width: "8%" }}>Queue No.</th>
+                        <th style={{ width: "17%" }}>Name</th>
+                        <th style={{ width: "7%" }}>Emp ID</th>
+                        <th style={{ width: "7%" }}>Gender</th>
+                        <th style={{ width: "6%" }}>Age</th>
+                        <th style={{ width: "11%" }}>Status</th>
+                        <th style={{ width: "28%" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>

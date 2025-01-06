@@ -31,17 +31,6 @@ function App() {
                   <p>Dashboard</p>
                 </Link>
               </li>
-              <li className="nav-item">
-                <Link
-                  to="/conditions"
-                  className={`nav-link ${
-                    location.pathname === "/conditions" ? "active" : ""
-                  }`}
-                >
-                  <i className="nav-icon fas fa-prescription-bottle-alt"></i>
-                  <p>Conditions & Medicine</p>
-                </Link>
-              </li>
             </ul>
           </nav>
         </div>
@@ -51,7 +40,7 @@ function App() {
       <div className="content-wrapper">
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/conditions" element={<Conditions />} />
+          {/* <Route path="/conditions" element={<Conditions />} /> */}
         </Routes>
       </div>
     </div>

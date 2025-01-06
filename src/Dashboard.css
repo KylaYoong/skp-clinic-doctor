@@ -1,4 +1,27 @@
-/* dashboard.css */
+.brand-link {
+    text-decoration: none !important; /* Remove text underline */
+  }
+  
+.card-header .card-title {
+    margin-bottom: 0; /* Remove any extra bottom margin */
+}
+
+.card-header .btn-primary {
+background-color: #17a2b8; /* Light teal */
+border-color: #17a2b8;
+color: white; /* White text for contrast */
+}
+
+.card-header .btn-primary:hover {
+background-color: #138496; /* Slightly darker teal on hover */
+border-color: #138496;
+}
+    
+.table td, 
+.table th {
+  vertical-align: middle; /* Vertically center the text */
+}
+
 .popup {
     position: fixed;
     top: 0;
