@@ -255,13 +255,20 @@ function DoctorDashboard() {
                   <table className="table table-hover">
                     <thead>
                       <tr>
-                        <th>Queue No.</th>
+                        {/* <th>Queue No.</th>
                         <th>Name</th>
                         <th>Emp ID</th>
                         <th>Gender</th>
                         <th>Age</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th>Actions</th> */}
+                        <th style={{ width: "9%" }}>Queue No.</th>
+                        <th style={{ width: "20%" }}>Name</th>
+                        <th style={{ width: "8%" }}>Emp ID</th>
+                        <th style={{ width: "8%" }}>Gender</th>
+                        <th style={{ width: "7%" }}>Age</th>
+                        <th style={{ width: "8%" }}>Status</th>
+                        <th style={{ width: "26%" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
