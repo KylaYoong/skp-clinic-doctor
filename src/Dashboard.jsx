@@ -109,7 +109,7 @@ function DoctorDashboard() {
       alert("No patients are waiting.");
       return;
     }
-  
+    
     try {
       // Update the patient's status in Firestore
       const patientDoc = doc(db, "queue", nextPatient.id);
@@ -128,6 +128,34 @@ function DoctorDashboard() {
     } catch (error) {
       console.error("Error updating patient status:", error);
       alert("Failed to update the next patient's status. Please try again.");
+    }
+  };
+
+  const handleRepeatCall = async () => {
+    // Find the current patient in consultation
+    const inConsultationPatient = tableData.find(
+      (patient) => patient.status.toLowerCase() === "in consultation"
+    );
+  
+    if (!inConsultationPatient) {
+      alert("No patient is currently in consultation to repeat the call.");
+      return;
+    }
+  
+    try {
+      // Optional: Log or notify about the repeated call
+      alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
+  
+      // If additional actions are required (e.g., updating a field in Firestore), handle them here
+      const patientDoc = doc(db, "queue", inConsultationPatient.id);
+      await updateDoc(patientDoc, {
+        // Add any specific field updates if needed
+      });
+  
+      console.log(`Repeat call for patient ${inConsultationPatient.name}`);
+    } catch (error) {
+      console.error("Error during repeat call:", error);
+      alert("Failed to repeat the call. Please try again.");
     }
   };
   
@@ -325,12 +353,22 @@ function DoctorDashboard() {
               <h3 className="card-title" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
                 Patient List
               </h3>
+                {/* Call Next Patient button */}
                 <div style={{ flex: "1", textAlign: "right" }}>
                   <button
                     className="btn btn-primary"
                     onClick={handleCallNextPatient}
                   >
                     Call Next Patient
+                  </button>
+                </div>
+                {/* Repeat Call button */}
+                <div style={{ flex: "0.15", textAlign: "right" }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleRepeatCall}
+                  >
+                    Repeat Call
                   </button>
                 </div>
               </div>
@@ -411,6 +449,7 @@ function DoctorDashboard() {
           </div>
         </div>
       </section>
+
 
       {/* Popup Window */}
       {popupPatient && (
