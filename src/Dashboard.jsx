@@ -32,7 +32,9 @@ function DoctorDashboard() {
   const updateWidgets = (updatedTableData) => {
     const newPatients = updatedTableData.filter((p) => p.status === "Waiting").length;
     const completedAppointments = updatedTableData.filter((p) => p.status === "Completed").length;
-    const pendingAppointments = newPatients; // Pending patients are the same as new patients in this case.
+    const pendingAppointments = updatedTableData.filter(
+      (p) => p.status === "Waiting" || p.status === "In Consultation"
+    ).length;
   
     setStats((prev) => ({
       ...prev,
@@ -42,6 +44,7 @@ function DoctorDashboard() {
       avgWaitingTime: calculateAverageWaitingTime(updatedTableData),
     }));
   };
+  
 
   
   // Listen to stats document for real-time updates
@@ -251,7 +254,7 @@ function DoctorDashboard() {
   // Save consultation details
   const handleSave = async () => {
     if (!popupPatient) return;
-
+  
     const dataToSave = {
       diagnosis: selectedDiagnosis,
       notes: additionalNotes,
@@ -259,22 +262,24 @@ function DoctorDashboard() {
       amount: mcAmount,
       medicines,
     };
-
+  
     try {
       const patientDoc = doc(db, "queue", popupPatient.id);
       await updateDoc(patientDoc, { consultationData: dataToSave, status: "Completed" });
-
-      setTableData((prev) =>
-        prev.map((item) =>
-          item.id === popupPatient.id ? { ...item, status: "Completed" } : item
-        )
+  
+      const updatedTableData = tableData.map((item) =>
+        item.id === popupPatient.id ? { ...item, status: "Completed" } : item
       );
-
+  
+      setTableData(updatedTableData);
+      updateWidgets(updatedTableData);
       closePopup();
     } catch (error) {
       console.error("Error saving consultation data:", error);
+      alert("Failed to save consultation details. Please try again.");
     }
   };
+  
 
   // Close the consultation popup
   const closePopup = () => {
@@ -318,8 +323,10 @@ function DoctorDashboard() {
       updateWidgets(updatedTableData); // Dynamically recalculate widgets
     } catch (error) {
       console.error("Error marking patient as Completed:", error);
+      alert("Failed to update the patient status. Please try again.");
     }
   };
+  
     
   
   
