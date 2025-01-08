@@ -29,6 +29,21 @@ function DoctorDashboard() {
   const [mcAmount, setMcAmount] = useState(""); // MC amount
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
 
+  const updateWidgets = (updatedTableData) => {
+    const newPatients = updatedTableData.filter((p) => p.status === "Waiting").length;
+    const completedAppointments = updatedTableData.filter((p) => p.status === "Completed").length;
+    const pendingAppointments = newPatients; // Pending patients are the same as new patients in this case.
+  
+    setStats((prev) => ({
+      ...prev,
+      newPatients,
+      completedAppointments,
+      pendingAppointments,
+      avgWaitingTime: calculateAverageWaitingTime(updatedTableData),
+    }));
+  };
+
+  
   // Listen to stats document for real-time updates
   useEffect(() => {
     const statsDocRef = doc(db, "stats", "statsDocID"); // Replace with your stats document ID
@@ -49,7 +64,7 @@ function DoctorDashboard() {
       try {
         const queueSnapshot = await getDocs(collection(db, "queue"));
         const employeesSnapshot = await getDocs(collection(db, "employees"));
-  
+    
         // Create a map of employee data
         const employeesMap = {};
         employeesSnapshot.docs.forEach((doc) => {
@@ -61,7 +76,7 @@ function DoctorDashboard() {
             empId: data.employeeID || "N/A",
           };
         });
-  
+    
         const today = new Date();
         const patients = queueSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -72,7 +87,7 @@ function DoctorDashboard() {
             timestamp.getDate() === today.getDate() &&
             timestamp.getMonth() === today.getMonth() &&
             timestamp.getFullYear() === today.getFullYear();
-  
+    
           return {
             id: doc.id,
             queueNo: data.queueNumber || "N/A",
@@ -87,23 +102,16 @@ function DoctorDashboard() {
             isToday,
           };
         });
-  
+    
         const todayPatients = patients.filter((p) => p.isToday);
-        const completed = todayPatients.filter((p) => p.status === "Completed").length;
-        const pending = todayPatients.filter((p) => p.status === "Waiting").length;
-  
+    
         setTableData(todayPatients);
-        setStats((prev) => ({
-          ...prev,
-          newPatients: todayPatients.length,
-          completedAppointments: completed,
-          pendingAppointments: pending,
-          avgWaitingTime: calculateAverageWaitingTime(todayPatients),
-        }));
+        updateWidgets(todayPatients); // Dynamically update widgets
       } catch (error) {
         console.error("Error fetching patient data:", error);
       }
     };
+    
   
     fetchTableData();
   
@@ -120,16 +128,22 @@ function DoctorDashboard() {
     const waitingTimes = patients
       .filter((p) => p.timeIn && p.timeOut)
       .map((p) => {
-        const timeIn = new Date(`1970-01-01T${p.timeIn}:00`);
-        const timeOut = new Date(`1970-01-01T${p.timeOut}:00`);
-        return (timeOut - timeIn) / (60 * 1000); // Difference in minutes
-      });
-
+        try {
+          const timeIn = new Date(`1970-01-01T${p.timeIn}`);
+          const timeOut = new Date(`1970-01-01T${p.timeOut}`);
+          return (timeOut - timeIn) / (60 * 1000); // Difference in minutes
+        } catch {
+          return null;
+        }
+      })
+      .filter((time) => time !== null); // Filter out invalid times
+  
     if (waitingTimes.length === 0) return "0 min";
-
+  
     const avg = waitingTimes.reduce((sum, time) => sum + time, 0) / waitingTimes.length;
     return `${Math.round(avg)} min`;
   };
+  
 
 
   const handleCallNextPatient = async () => {
@@ -295,15 +309,18 @@ function DoctorDashboard() {
     try {
       const patientDoc = doc(db, "queue", patient.id);
       await updateDoc(patientDoc, { status: "Completed" });
-      setTableData((prev) =>
-        prev.map((item) =>
-          item.id === patient.id ? { ...item, status: "Completed" } : item
-        )
+  
+      const updatedTableData = tableData.map((item) =>
+        item.id === patient.id ? { ...item, status: "Completed" } : item
       );
+  
+      setTableData(updatedTableData);
+      updateWidgets(updatedTableData); // Dynamically recalculate widgets
     } catch (error) {
       console.error("Error marking patient as Completed:", error);
     }
   };
+    
   
   
   return (
