@@ -30,10 +30,10 @@ function DoctorDashboard() {
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
 
   const updateWidgets = (updatedTableData) => {
-    const newPatients = updatedTableData.filter((p) => p.status === "Waiting").length;
+    const newPatients = updatedTableData.filter((p) => p.isToday).length;
     const completedAppointments = updatedTableData.filter((p) => p.status === "Completed").length;
     const pendingAppointments = updatedTableData.filter(
-      (p) => p.status === "Waiting" || p.status === "In Consultation"
+      (p) => p.status === "Waiting"
     ).length;
   
     setStats((prev) => ({
