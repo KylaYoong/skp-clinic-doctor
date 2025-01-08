@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase-config";
 import "./Dashboard.css"; // CSS for maintaining the original layout
 
@@ -19,6 +19,9 @@ function DoctorDashboard() {
     "Back Pain",
     "Migraine",
   ]); // Predefined list of diagnoses
+
+  // const diagnosisList = ["Common Cold", "Flu", "Back Pain", "Migraine"]; // Predefined diagnoses
+
   const [selectedDiagnosis, setSelectedDiagnosis] = useState(""); // Selected diagnosis
   const [additionalNotes, setAdditionalNotes] = useState(""); // Notes from the doctor
   const [mcYes, setMcYes] = useState(false); // MC selection
@@ -26,80 +29,93 @@ function DoctorDashboard() {
   const [mcAmount, setMcAmount] = useState(""); // MC amount
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
 
-
+  // Listen to stats document for real-time updates
   useEffect(() => {
-    // Fetch statistics and patient data on component load
-    const fetchStats = async () => {
-      const statsSnapshot = await getDocs(collection(db, "stats"));
-      if (!statsSnapshot.empty) {
-        setStats(statsSnapshot.docs[0].data());
+    const statsDocRef = doc(db, "stats", "statsDocID"); // Replace with your stats document ID
+    const unsubscribe = onSnapshot(statsDocRef, (doc) => {
+      if (doc.exists()) {
+        setStats(doc.data());
+      } else {
+        console.error("Stats document not found");
       }
-    };
+    });
 
+    return () => unsubscribe(); // Cleanup listener
+  }, []);
+
+  // Fetch patient data and synchronize widgets
+  useEffect(() => {
     const fetchTableData = async () => {
       try {
         const queueSnapshot = await getDocs(collection(db, "queue"));
-        const employeesSnapshot = await getDocs(collection(db, "employees"));
 
-        const employeesMap = {};
-        employeesSnapshot.docs.forEach((doc) => {
+        const today = new Date();
+        const patients = queueSnapshot.docs.map((doc) => {
           const data = doc.data();
-          employeesMap[data.employeeID] = {
-            name: data.name,
-            gender: data.gender,
-            dateOfBirth: data.dob,
-            empId: data.employeeID,
+          const timestamp = data.timestamp?.toDate();
+          const isToday =
+            timestamp &&
+            timestamp.getDate() === today.getDate() &&
+            timestamp.getMonth() === today.getMonth() &&
+            timestamp.getFullYear() === today.getFullYear();
+
+          return {
+            id: doc.id,
+            queueNo: data.queueNumber || "N/A",
+            name: data.name || "N/A",
+            empId: data.empId || "N/A",
+            gender: data.gender || "N/A",
+            age: calculateAge(data.dateOfBirth),
+            status: data.status || "Waiting",
+            timeIn: data.timeIn || null,
+            timeOut: data.timeOut || null,
+            timestamp,
+            isToday,
           };
         });
 
-        const patients = queueSnapshot.docs
-          .filter((doc) => {
-            const queueData = doc.data();
-            const timestamp = queueData.timestamp?.toDate(); // Convert Firestore timestamp to JS Date
-            const today = new Date();
-            return (
-              timestamp &&
-              timestamp.getDate() === today.getDate() &&
-              timestamp.getMonth() === today.getMonth() &&
-              timestamp.getFullYear() === today.getFullYear()
-            );
-          })
-          .map((doc) => {
-            const queueData = doc.data();
-            const empData = employeesMap[queueData.employeeID] || {};
-            return {
-              id: doc.id,
-              queueNo: queueData.queueNumber || "N/A",
-              name: empData.name || "N/A",
-              empId: empData.empId || "N/A",
-              gender: empData.gender || "N/A",
-              age: calculateAge(empData.dateOfBirth),
-              timeIn: queueData.timeIn || null,
-              timeOut: queueData.timeOut || null,
-              status: queueData.status || "Waiting",
-            };
-          });
+        const todayPatients = patients.filter((p) => p.isToday);
+        const completed = todayPatients.filter((p) => p.status === "Completed").length;
+        const pending = todayPatients.filter((p) => p.status === "Waiting").length;
 
-        setTableData(patients);
+        setTableData(todayPatients);
+        setStats((prev) => ({
+          ...prev,
+          newPatients: todayPatients.length,
+          completedAppointments: completed,
+          pendingAppointments: pending,
+          avgWaitingTime: calculateAverageWaitingTime(todayPatients),
+        }));
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching patient data:", error);
       }
     };
 
-    // Initial fetch
-    fetchStats();
     fetchTableData();
 
-    // Set up daily refresh
     const intervalId = setInterval(() => {
-      console.log("Refreshing patient list...");
-      fetchStats();
       fetchTableData();
-    }, 86400000); // 24 hours in milliseconds
+    }, 86400000); // Refresh daily
 
-    // Cleanup interval on component unmount
-    return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId); // Cleanup interval
   }, []);
+
+  // Calculate average waiting time
+  const calculateAverageWaitingTime = (patients) => {
+    const waitingTimes = patients
+      .filter((p) => p.timeIn && p.timeOut)
+      .map((p) => {
+        const timeIn = new Date(`1970-01-01T${p.timeIn}:00`);
+        const timeOut = new Date(`1970-01-01T${p.timeOut}:00`);
+        return (timeOut - timeIn) / (60 * 1000); // Difference in minutes
+      });
+
+    if (waitingTimes.length === 0) return "0 min";
+
+    const avg = waitingTimes.reduce((sum, time) => sum + time, 0) / waitingTimes.length;
+    return `${Math.round(avg)} min`;
+  };
+
 
   const handleCallNextPatient = async () => {
     // Find the next patient in the queue with status "Waiting"
@@ -158,7 +174,6 @@ function DoctorDashboard() {
       alert("Failed to repeat the call. Please try again.");
     }
   };
-  
 
   // Calculate patient's age based on DOB
   const calculateAge = (dob) => {
