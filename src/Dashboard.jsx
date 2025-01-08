@@ -48,24 +48,38 @@ function DoctorDashboard() {
     const fetchTableData = async () => {
       try {
         const queueSnapshot = await getDocs(collection(db, "queue"));
-
+        const employeesSnapshot = await getDocs(collection(db, "employees"));
+  
+        // Create a map of employee data
+        const employeesMap = {};
+        employeesSnapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          employeesMap[data.employeeID] = {
+            name: data.name || "N/A",
+            gender: data.gender || "N/A",
+            dateOfBirth: data.dob || null,
+            empId: data.employeeID || "N/A",
+          };
+        });
+  
         const today = new Date();
         const patients = queueSnapshot.docs.map((doc) => {
           const data = doc.data();
+          const empData = employeesMap[data.employeeID] || {}; // Map employee data
           const timestamp = data.timestamp?.toDate();
           const isToday =
             timestamp &&
             timestamp.getDate() === today.getDate() &&
             timestamp.getMonth() === today.getMonth() &&
             timestamp.getFullYear() === today.getFullYear();
-
+  
           return {
             id: doc.id,
             queueNo: data.queueNumber || "N/A",
-            name: data.name || "N/A",
-            empId: data.empId || "N/A",
-            gender: data.gender || "N/A",
-            age: calculateAge(data.dateOfBirth),
+            name: empData.name || "N/A",
+            empId: empData.empId || "N/A",
+            gender: empData.gender || "N/A",
+            age: calculateAge(empData.dateOfBirth),
             status: data.status || "Waiting",
             timeIn: data.timeIn || null,
             timeOut: data.timeOut || null,
@@ -73,11 +87,11 @@ function DoctorDashboard() {
             isToday,
           };
         });
-
+  
         const todayPatients = patients.filter((p) => p.isToday);
         const completed = todayPatients.filter((p) => p.status === "Completed").length;
         const pending = todayPatients.filter((p) => p.status === "Waiting").length;
-
+  
         setTableData(todayPatients);
         setStats((prev) => ({
           ...prev,
@@ -90,15 +104,16 @@ function DoctorDashboard() {
         console.error("Error fetching patient data:", error);
       }
     };
-
+  
     fetchTableData();
-
+  
     const intervalId = setInterval(() => {
       fetchTableData();
     }, 86400000); // Refresh daily
-
+  
     return () => clearInterval(intervalId); // Cleanup interval
   }, []);
+  
 
   // Calculate average waiting time
   const calculateAverageWaitingTime = (patients) => {
