@@ -83,14 +83,14 @@ function DoctorDashboard() {
         const today = new Date();
         const patients = queueSnapshot.docs.map((doc) => {
           const data = doc.data();
-          const empData = employeesMap[data.employeeID] || {}; // Map employee data
+          const empData = employeesMap[data.employeeID] || {};
           const timestamp = data.timestamp?.toDate();
           const isToday =
             timestamp &&
             timestamp.getDate() === today.getDate() &&
             timestamp.getMonth() === today.getMonth() &&
             timestamp.getFullYear() === today.getFullYear();
-    
+        
           return {
             id: doc.id,
             queueNo: data.queueNumber || "N/A",
@@ -105,10 +105,16 @@ function DoctorDashboard() {
             isToday,
           };
         });
-    
-        const todayPatients = patients.filter((p) => p.isToday);
-    
-        setTableData(todayPatients);
+        
+        const todayPatients = patients
+          .filter((p) => p.isToday)
+          .sort((a, b) => {
+            const queueA = parseInt(a.queueNo, 10);
+            const queueB = parseInt(b.queueNo, 10);
+            return queueA - queueB; // Ascending order
+          });
+        
+        setTableData(todayPatients);        
         updateWidgets(todayPatients); // Dynamically update widgets
       } catch (error) {
         console.error("Error fetching patient data:", error);
@@ -372,7 +378,7 @@ function DoctorDashboard() {
               </div>
             </div>
 
-            {/* Pending Appointments Widget */}
+            {/* Pending Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box bg-warning"> {/* Retain bg-warning */}
                 <div className="inner">
