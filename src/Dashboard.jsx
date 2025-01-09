@@ -152,23 +152,59 @@ function DoctorDashboard() {
     return `${Math.round(avg)} min`;
   };
   
-
+    // Announce the queue number
+  const announceQueueNumber = (queueNumber) => {
+    if ("speechSynthesis" in window) {
+      // Format the queue number as "zero zero seven"
+      const formattedQueueNumber = queueNumber
+        .toString()
+        .split("")
+        .map((digit) => {
+          if (digit === "0") return "zero";
+          return digit;
+        })
+        .join(" ");
+  
+      // Play "ding dong" sound
+      const audio = new Audio('/sounds/minimalist-ding-dong.wav');
+      // const audio = new Audio('/sounds/ding-dong.wav');
+      audio.play();
+  
+      // Wait for the sound to finish before speaking
+      audio.onended = () => {
+        // English announcement
+        // const englishUtterance = new SpeechSynthesisUtterance(`Now serving ${formattedQueueNumber}`);
+        const englishUtterance = new SpeechSynthesisUtterance(`${formattedQueueNumber}`);
+        englishUtterance.lang = "en-US";
+        englishUtterance.rate = 0.1; // Slower pace
+  
+        // Malay announcement
+        // const malayUtterance = new SpeechSynthesisUtterance(`Sekarang nombor ${queueNumber}`);
+        const malayUtterance = new SpeechSynthesisUtterance(`${queueNumber}`);
+        malayUtterance.lang = "ms-MY";
+        malayUtterance.rate = 0.1; // Slower pace
+  
+        // Queue announcements
+        window.speechSynthesis.speak(englishUtterance);
+        window.speechSynthesis.speak(malayUtterance);
+      };
+    }
+  };
+  
+  
 
   const handleCallNextPatient = async () => {
-    // Find the next patient in the queue with status "Waiting"
     const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
   
     if (!nextPatient) {
       alert("No patients are waiting.");
       return;
     }
-    
+  
     try {
-      // Update the patient's status in Firestore
       const patientDoc = doc(db, "queue", nextPatient.id);
       await updateDoc(patientDoc, { status: "In Consultation" });
   
-      // Update the local state to reflect the change
       setTableData((prev) =>
         prev.map((item) =>
           item.id === nextPatient.id
@@ -176,6 +212,9 @@ function DoctorDashboard() {
             : item
         )
       );
+  
+      // Announce the queue number
+      announceQueueNumber(nextPatient.queueNo);
   
       alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
     } catch (error) {
@@ -196,25 +235,10 @@ function DoctorDashboard() {
     }
   
     try {
-          // Announce the patient's queue number
-      if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(
-          `Now serving ${inConsultationPatient.queueNo}`
-        );
-        utterance.lang = "en-US";
-        window.speechSynthesis.speak(utterance);
-      }
-
-      // Optional: Log or notify about the repeated call
+      // Announce the queue number
+      announceQueueNumber(inConsultationPatient.queueNo);
+  
       alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
-  
-      // If additional actions are required (e.g., updating a field in Firestore), handle them here
-      const patientDoc = doc(db, "queue", inConsultationPatient.id);
-      await updateDoc(patientDoc, {
-        // Add any specific field updates if needed
-      });
-  
-      console.log(`Repeat call for patient ${inConsultationPatient.name}`);
     } catch (error) {
       console.error("Error during repeat call:", error);
       alert("Failed to repeat the call. Please try again.");
