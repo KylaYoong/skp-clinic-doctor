@@ -197,6 +197,15 @@ function DoctorDashboard() {
     }
   
     try {
+          // Announce the patient's queue number
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(
+          `Now serving ${inConsultationPatient.queueNo}`
+        );
+        utterance.lang = "en-US";
+        window.speechSynthesis.speak(utterance);
+      }
+
       // Optional: Log or notify about the repeated call
       alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
   
