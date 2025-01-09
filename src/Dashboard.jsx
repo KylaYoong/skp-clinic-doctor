@@ -46,7 +46,6 @@ function DoctorDashboard() {
   };
   
 
-  
   // Listen to stats document for real-time updates
   useEffect(() => {
     const statsDocRef = doc(db, "stats", "statsDocID"); // Replace with your stats document ID
