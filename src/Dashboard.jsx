@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { collection, getDocs, updateDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase-config";
 import "./Dashboard.css"; // CSS for maintaining the original layout
+import axios from "axios";
 
 function DoctorDashboard() {
   const [tableData, setTableData] = useState([]); // Patient data
@@ -28,6 +29,8 @@ function DoctorDashboard() {
   const [mcDates, setMcDates] = useState({ start: "", end: "" }); // MC dates
   const [mcAmount, setMcAmount] = useState(""); // MC amount
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
+  const [medicineSuggestions, setMedicineSuggestions] = useState([]);
+
 
   const updateWidgets = (updatedTableData) => {
     const newPatients = updatedTableData.filter((p) => p.isToday).length;
@@ -45,6 +48,27 @@ function DoctorDashboard() {
     }));
   };
   
+
+  const fetchMedicineSuggestions = async (query) => {
+    if (!query) {
+      setMedicineSuggestions([]);
+      return;
+    }
+  
+    try {
+      const response = await axios.get(
+        `https://rxnav.nlm.nih.gov/REST/drugs.json?name=${query}`
+      );
+      console.log("API Response:", response.data);
+  
+      const suggestions =
+        response.data.suggestionGroup?.suggestionList?.suggestion || [];
+      setMedicineSuggestions(suggestions);
+    } catch (error) {
+      console.error("Error fetching medicine suggestions:", error);
+      setMedicineSuggestions([]);
+    }
+  };
 
   // Listen to stats document for real-time updates
   useEffect(() => {
@@ -570,18 +594,20 @@ function DoctorDashboard() {
               </select>
             </div>
 
+
             {/* Medicines */}
             <div className="form-group">
               <label>Medicines:</label>
               {medicines.map((med, index) => (
-                <div key={index} className="d-flex mb-2">
+                <div key={index} className="d-flex mb-2 position-relative">
                   <input
                     type="text"
                     placeholder="Medicine Name"
                     value={med.name}
-                    onChange={(e) =>
-                      handleMedicineChange(index, "name", e.target.value)
-                    }
+                    onChange={(e) => {
+                      handleMedicineChange(index, "name", e.target.value);
+                      fetchMedicineSuggestions(e.target.value); // Fetch suggestions
+                    }}
                     className="form-control mr-2"
                   />
                   <input
@@ -600,6 +626,7 @@ function DoctorDashboard() {
                     Remove
                   </button>
                 </div>
+
               ))}
               <button
                 className="btn btn-secondary btn-sm"
@@ -608,6 +635,7 @@ function DoctorDashboard() {
                 Add Medicine
               </button>
             </div>
+
 
             {/* Additional Notes */}
             <div className="form-group">

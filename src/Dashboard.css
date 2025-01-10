@@ -45,14 +45,27 @@ border-color: #138496;
     /* z-index: 1000; */
   }
   
-  .popup-content {
+  /* .popup-content {
     background: white;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     width: 400px;
     text-align: center;
-  }
+  } */
+
+  .popup-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    width: 90%; /* Adjusted to occupy 90% of the screen width */
+    max-width: 850px; /* Set a reasonable maximum width */
+    height: 98%; /* Adjusted to occupy 90% of the screen height */
+    max-height: 1200px; /* Set a reasonable maximum height */
+    text-align: center;
+    overflow-y: auto; /* Add scrolling if content exceeds height */
+}
   
   .popup-content button {
     margin-top: 10px;
@@ -63,3 +76,26 @@ border-color: #138496;
     margin-left: 0;
     padding-left: 0;
   }
+
+
+  /* Medicines Input */
+  .suggestions {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    width: 100%; /* Ensure it matches the width of the input field */
+    margin-top: 5px; /* Add spacing below the input field */
+  }
+  
+  .suggestion-item {
+    padding: 10px;
+    cursor: pointer;
+  }
+  
+  .suggestion-item:hover {
+    background: #f0f0f0;
+  }
+  
