@@ -13,16 +13,11 @@ function DoctorDashboard() {
   });
 
   const [popupPatient, setPopupPatient] = useState(null); // Current patient in the popup
-  const [diagnosisList] = useState([
-    "Common Cold",
-    "Flu",
-    "Back Pain",
-    "Migraine",
-  ]); // Predefined list of diagnoses
 
-  // const diagnosisList = ["Common Cold", "Flu", "Back Pain", "Migraine"]; // Predefined diagnoses
-
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState(""); // Selected diagnosis
+  const [diagnoses, setDiagnoses] = useState([{ name: "" }]); // Diagnoses list
+  const [diagnosisSuggestions, setDiagnosisSuggestions] = useState([]); // Suggestions for diagnoses
+  const [diagnosisList, setDiagnosisList] = useState([]); // Loaded diagnoses from Firestore  
+  
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
   const [medicineSuggestions, setMedicineSuggestions] = useState([]);
   const [medicineList, setMedicineList] = useState([]);
@@ -214,7 +209,46 @@ function DoctorDashboard() {
       alert("Failed to repeat the call. Please try again.");
     }
   };
-    
+
+  useEffect(() => {
+    const fetchDiagnoses = async () => {
+      try {
+        const diagnosesSnapshot = await getDocs(collection(db, "diagnoses"));
+        const diagnosesData = diagnosesSnapshot.docs.map((doc) => doc.data().name);
+        setDiagnosisList(diagnosesData); // Store fetched diagnoses
+      } catch (error) {
+        console.error("Error fetching diagnoses:", error);
+      }
+    };
+    fetchDiagnoses();
+  }, []);
+  
+  const fetchDiagnosisSuggestions = (query) => {
+    if (!query) {
+      setDiagnosisSuggestions([]);
+      return;
+    }
+    const filteredSuggestions = diagnosisList
+      .filter((diag) => diag.toLowerCase().startsWith(query.toLowerCase()))
+      .slice(0, 10); // Limit suggestions to 10
+    setDiagnosisSuggestions(filteredSuggestions);
+  };
+  
+  const handleDiagnosisChange = (index, field, value) => {
+    setDiagnoses((prev) =>
+      prev.map((diag, i) => (i === index ? { ...diag, [field]: value } : diag))
+    );
+  };
+  
+  const handleAddDiagnosis = () => {
+    setDiagnoses([...diagnoses, { name: "" }]);
+  };
+  
+  const handleRemoveDiagnosis = (index) => {
+    setDiagnoses((prev) => prev.filter((_, i) => i !== index));
+  };
+  
+  // Medicines
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
@@ -582,23 +616,55 @@ function DoctorDashboard() {
             <p>
               You are consulting with: <strong>{popupPatient.name}</strong>
             </p>
+            
             {/* Diagnosis */}
             <div className="form-group">
               <label>Diagnosis:</label>
-              <select
-                value={selectedDiagnosis}
-                onChange={(e) => setSelectedDiagnosis(e.target.value)}
-                className="form-control"
+              {diagnoses.map((diag, index) => (
+                <div key={index} className="d-flex mb-2 position-relative">
+                  <div style={{ width: "100%", position: "relative" }}>
+                    <input
+                      type="text"
+                      placeholder="Diagnosis Name"
+                      value={diag.name}
+                      onChange={(e) => {
+                        handleDiagnosisChange(index, "name", e.target.value);
+                        fetchDiagnosisSuggestions(e.target.value); // Fetch suggestions
+                      }}
+                      className="form-control"
+                    />
+                    {/* Render suggestions */}
+                    {diagnosisSuggestions.length > 0 && (
+                      <div className="suggestions">
+                        {diagnosisSuggestions.map((suggestion, i) => (
+                          <div
+                            key={i}
+                            className="suggestion-item"
+                            onClick={() => {
+                              handleDiagnosisChange(index, "name", suggestion);
+                              setDiagnosisSuggestions([]);
+                            }}
+                          >
+                            {suggestion}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleRemoveDiagnosis(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleAddDiagnosis}
               >
-                <option value="" disabled>
-                  Select Diagnosis
-                </option>
-                {diagnosisList.map((diag, index) => (
-                  <option key={index} value={diag}>
-                    {diag}
-                  </option>
-                ))}
-              </select>
+                Add Diagnosis
+              </button>
             </div>
 
 
@@ -638,6 +704,8 @@ function DoctorDashboard() {
               </div>
             )}
             </div>
+
+            {/* Dosage */}
             <input
               type="text"
               placeholder="Dosage"
