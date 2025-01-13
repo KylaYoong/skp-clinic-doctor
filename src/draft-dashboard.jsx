@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { collection, getDocs, updateDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase-config";
 import "./Dashboard.css"; // CSS for maintaining the original layout
+import axios from "axios";
 
 function DoctorDashboard() {
   const [tableData, setTableData] = useState([]); // Patient data
@@ -23,13 +24,12 @@ function DoctorDashboard() {
   // const diagnosisList = ["Common Cold", "Flu", "Back Pain", "Migraine"]; // Predefined diagnoses
 
   const [selectedDiagnosis, setSelectedDiagnosis] = useState(""); // Selected diagnosis
-  const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
-  const [medicineSuggestions, setMedicineSuggestions] = useState([]);
-  const [medicineList, setMedicineList] = useState([]);
   const [additionalNotes, setAdditionalNotes] = useState(""); // Notes from the doctor
   const [mcYes, setMcYes] = useState(false); // MC selection
   const [mcDates, setMcDates] = useState({ start: "", end: "" }); // MC dates
   const [mcAmount, setMcAmount] = useState(""); // MC amount
+  const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
+  const [medicineList, setMedicineList] = useState([]);
 
 
   const updateWidgets = (updatedTableData) => {
@@ -132,6 +132,7 @@ function DoctorDashboard() {
   
     return () => clearInterval(intervalId); // Cleanup interval
   }, []);
+  
 
   // Calculate average waiting time
   const calculateAverageWaitingTime = (patients) => {
@@ -193,69 +194,19 @@ function DoctorDashboard() {
     }
   };
   
-  const handleRepeatCall = async () => {
-    // Find the current patient in consultation
-    const inConsultationPatient = tableData.find(
-      (patient) => patient.status.toLowerCase() === "in consultation"
-    );
-  
-    if (!inConsultationPatient) {
-      alert("No patient is currently in consultation to repeat the call.");
-      return;
-    }
-  
-    try {
-      // Announce the queue number
-      announceQueueNumber(inConsultationPatient.queueNo);
-  
-      alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
-    } catch (error) {
-      console.error("Error during repeat call:", error);
-      alert("Failed to repeat the call. Please try again.");
-    }
-  };
-    
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const medicinesSnapshot = await getDocs(collection(db, "medicines"));
-        const medicinesData = medicinesSnapshot.docs.map((doc) => doc.data().name);
-        setMedicineList(medicinesData);
-        if (process.env.NODE_ENV === "development") {
-          console.log("Medicines fetched for doctor side:", medicinesData);
-        }
-      } catch (error) {
-        console.error("Error fetching medicines:", error);
-      }
-    };
-  
-    fetchMedicines();
-  }, []);  
-
   const fetchMedicineSuggestions = (query) => {
     if (!query) {
       setMedicineSuggestions([]);
       return;
     }
-    const filteredSuggestions = medicineList
-      .filter((medicine) => medicine.toLowerCase().startsWith(query.toLowerCase()))
-      .slice(0, 10);
+  
+    const filteredSuggestions = medicineList.filter((medicine) =>
+      medicine.toLowerCase().includes(query.toLowerCase())
+    );
+  
     setMedicineSuggestions(filteredSuggestions);
   };
-
-  const handleMedicineChange = (index, field, value) => {
-    setMedicines((prev) =>
-      prev.map((med, i) => (i === index ? { ...med, [field]: value } : med))
-    );
-  };
-
-  const handleAddMedicine = () => {
-    setMedicines([...medicines, { name: "", dosage: "" }]);
-  };
-
-  const handleRemoveMedicine = (index) => {
-    setMedicines((prev) => prev.filter((_, i) => i !== index));
-  };
+  
 
   const handleCallNextPatient = async () => {
     const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
@@ -287,6 +238,28 @@ function DoctorDashboard() {
     }
   };
 
+  const handleRepeatCall = async () => {
+    // Find the current patient in consultation
+    const inConsultationPatient = tableData.find(
+      (patient) => patient.status.toLowerCase() === "in consultation"
+    );
+  
+    if (!inConsultationPatient) {
+      alert("No patient is currently in consultation to repeat the call.");
+      return;
+    }
+  
+    try {
+      // Announce the queue number
+      announceQueueNumber(inConsultationPatient.queueNo);
+  
+      alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
+    } catch (error) {
+      console.error("Error during repeat call:", error);
+      alert("Failed to repeat the call. Please try again.");
+    }
+  };
+
   // Calculate patient's age based on DOB
   const calculateAge = (dob) => {
     if (!dob) return "N/A";
@@ -301,11 +274,6 @@ function DoctorDashboard() {
       age--;
     }
     return age;
-  };
-
-  const handleConsult = (patient) => {
-    console.log("Consulting Patient:", patient);
-    setPopupPatient(patient);
   };
 
   // Mark patient's time-in
@@ -364,7 +332,16 @@ function DoctorDashboard() {
       alert("Failed to save consultation details. Please try again.");
     }
   };
-    
+  
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      const medicinesSnapshot = await getDocs(collection(db, "medicines"));
+      const medicinesData = medicinesSnapshot.docs.map((doc) => doc.data().name);
+      setMedicineList(medicinesData);
+    };
+  
+    fetchMedicines();
+  }, []);
 
   // Close the consultation popup
   const closePopup = () => {
@@ -375,6 +352,23 @@ function DoctorDashboard() {
     setMcDates({ start: "", end: "" });
     setMcAmount("");
     setMedicines([{ name: "", dosage: "" }]);
+  };
+
+  // Add a new medicine field
+  const handleAddMedicine = () => {
+    setMedicines([...medicines, { name: "", dosage: "" }]);
+  };
+
+  // Remove a medicine field
+  const handleRemoveMedicine = (index) => {
+    setMedicines((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Update medicine details
+  const handleMedicineChange = (index, field, value) => {
+    setMedicines((prev) =>
+      prev.map((med, i) => (i === index ? { ...med, [field]: value } : med))
+    );
   };
 
   // Mark patient as Completed using the tick icon
@@ -394,7 +388,8 @@ function DoctorDashboard() {
       alert("Failed to update the patient status. Please try again.");
     }
   };
-      
+  
+    
   
   
   return (
@@ -474,7 +469,6 @@ function DoctorDashboard() {
               <h3 className="card-title" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
                 Patient List
               </h3>
-
                 {/* Call Next Patient button */}
                 <div style={{ flex: "1", textAlign: "right" }}>
                   <button
@@ -484,7 +478,6 @@ function DoctorDashboard() {
                     Call Next Patient
                   </button>
                 </div>
-
                 {/* Repeat Call button */}
                 <div style={{ flex: "0.15", textAlign: "right" }}>
                   <button
@@ -549,7 +542,7 @@ function DoctorDashboard() {
                             )}
                             <button
                               className="btn btn-primary btn-sm ml-2"
-                              onClick={() => handleConsult(row)}
+                              onClick={() => setPopupPatient(row)}
                             >
                               Consult
                             </button>
@@ -604,64 +597,64 @@ function DoctorDashboard() {
 
             {/* Medicines */}
             <div className="form-group">
-              <label>Medicines:</label>
-              {medicines.map((med, index) => (
-                <div key={index} className="d-flex mb-2 position-relative">
-                  <div style={{ width: "100%", position: "relative" }}>
-                    <input
-                      type="text"
-                      placeholder="Medicine Name"
-                      value={med.name}
-                      onChange={(e) => {
-                        handleMedicineChange(index, "name", e.target.value);
-                        fetchMedicineSuggestions(e.target.value); // Fetch suggestions
-                      }}
-                      className="form-control"
-              />
-              
-            {console.log("Current Suggestions:", medicineSuggestions)}
-            {/* Render suggestions */}
-            {medicineSuggestions.length > 0 && (
-              <div className="suggestions">
-                {medicineSuggestions.map((suggestion, i) => (
-                  <div
-                    key={i}
-                    className="suggestion-item"
-                    onClick={() => {
-                      handleMedicineChange(index, "name", suggestion);
-                      setMedicineSuggestions([]);
-                    }}
-                  >
-                    {suggestion}
-                  </div>
-                ))}
+  <label>Medicines:</label>
+  {medicines.map((med, index) => (
+    <div key={index} className="d-flex mb-2 position-relative">
+      <div style={{ width: "100%", position: "relative" }}>
+        <input
+          type="text"
+          placeholder="Medicine Name"
+          value={med.name}
+          onChange={(e) => {
+            handleMedicineChange(index, "name", e.target.value);
+            fetchMedicineSuggestions(e.target.value); // Fetch suggestions
+          }}
+          className="form-control"
+        />
+        {console.log("Current Suggestions:", medicineSuggestions)}
+        {/* Render suggestions */}
+        {medicineSuggestions.length > 0 && (
+          <div className="suggestions">
+            {medicineSuggestions.map((suggestion, i) => (
+              <div
+                key={i}
+                className="suggestion-item"
+                onClick={() => {
+                  handleMedicineChange(index, "name", suggestion);
+                  setMedicineSuggestions([]);
+                }}
+              >
+                {suggestion}
               </div>
-            )}
-            </div>
-            <input
-              type="text"
-              placeholder="Dosage"
-              value={med.dosage}
-              onChange={(e) =>
-                handleMedicineChange(index, "dosage", e.target.value)
-              }
-              className="form-control mr-2"
-            />
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={() => handleRemoveMedicine(index)}
-            >
-              Remove
-            </button>
+            ))}
           </div>
-        ))}
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={handleAddMedicine}
-        >
-          Add Medicine
-        </button>
+        )}
       </div>
+      <input
+        type="text"
+        placeholder="Dosage"
+        value={med.dosage}
+        onChange={(e) =>
+          handleMedicineChange(index, "dosage", e.target.value)
+        }
+        className="form-control mr-2"
+      />
+      <button
+        className="btn btn-danger btn-sm"
+        onClick={() => handleRemoveMedicine(index)}
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+  <button
+    className="btn btn-secondary btn-sm"
+    onClick={handleAddMedicine}
+  >
+    Add Medicine
+  </button>
+</div>
+
 
 
             {/* Additional Notes */}
