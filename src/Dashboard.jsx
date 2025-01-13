@@ -459,7 +459,6 @@ function DoctorDashboard() {
                 </div>
               </div>
             </div>
-
             {/* Completed Appointments Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box" style={{ backgroundColor: "#28a745", color: "#fff" }}>
@@ -472,7 +471,6 @@ function DoctorDashboard() {
                 </div>
               </div>
             </div>
-
             {/* Pending Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box bg-warning"> {/* Retain bg-warning */}
@@ -485,7 +483,6 @@ function DoctorDashboard() {
                 </div>
               </div>
             </div>
-
             {/* Average Waiting Time Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box bg-secondary"> {/* Retain bg-secondary */}
@@ -499,7 +496,6 @@ function DoctorDashboard() {
               </div>
             </div>
           </div>
-
           {/* Patient Table Section */}
           <div className="row mt-4">
             <div className="col-12">
