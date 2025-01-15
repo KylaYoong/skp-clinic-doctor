@@ -1,7 +1,6 @@
 import React from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import Dashboard from "./Dashboard";
-import Conditions from "./Conditions";
 
 function App() {
   const location = useLocation();
@@ -40,7 +39,6 @@ function App() {
       <div className="content-wrapper">
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          {/* <Route path="/conditions" element={<Conditions />} /> */}
         </Routes>
       </div>
     </div>

@@ -5,6 +5,7 @@ import "./Dashboard.css"; // CSS for maintaining the original layout
 
 function DoctorDashboard() {
   const [tableData, setTableData] = useState([]); // Patient data
+
   const [stats, setStats] = useState({
     newPatients: 0,
     completedAppointments: 0,
@@ -33,7 +34,7 @@ function DoctorDashboard() {
     const pendingAppointments = updatedTableData.filter(
       (p) => p.status === "Waiting"
     ).length;
-  
+
     setStats((prev) => ({
       ...prev,
       newPatients,
@@ -42,7 +43,6 @@ function DoctorDashboard() {
       avgWaitingTime: calculateAverageWaitingTime(updatedTableData),
     }));
   };
-  
 
   // Listen to stats document for real-time updates
   useEffect(() => {
@@ -64,7 +64,7 @@ function DoctorDashboard() {
       try {
         const queueSnapshot = await getDocs(collection(db, "queue"));
         const employeesSnapshot = await getDocs(collection(db, "employees"));
-    
+
         // Create a map of employee data
         const employeesMap = {};
         employeesSnapshot.docs.forEach((doc) => {
@@ -76,7 +76,7 @@ function DoctorDashboard() {
             empId: data.employeeID || "N/A",
           };
         });
-    
+
         const today = new Date();
         const patients = queueSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -87,7 +87,7 @@ function DoctorDashboard() {
             timestamp.getDate() === today.getDate() &&
             timestamp.getMonth() === today.getMonth() &&
             timestamp.getFullYear() === today.getFullYear();
-        
+
           return {
             id: doc.id,
             queueNo: data.queueNumber || "N/A",
@@ -102,7 +102,7 @@ function DoctorDashboard() {
             isToday,
           };
         });
-        
+
         const todayPatients = patients
           .filter((p) => p.isToday)
           .sort((a, b) => {
@@ -110,21 +110,21 @@ function DoctorDashboard() {
             const queueB = parseInt(b.queueNo, 10);
             return queueA - queueB; // Ascending order
           });
-        
+
         setTableData(todayPatients);        
         updateWidgets(todayPatients); // Dynamically update widgets
       } catch (error) {
         console.error("Error fetching patient data:", error);
       }
     };
-    
-  
+
+
     fetchTableData();
-  
+
     const intervalId = setInterval(() => {
       fetchTableData();
     }, 86400000); // Refresh daily
-  
+
     return () => clearInterval(intervalId); // Cleanup interval
   }, []);
 
@@ -142,13 +142,13 @@ function DoctorDashboard() {
         }
       })
       .filter((time) => time !== null); // Filter out invalid times
-  
+
     if (waitingTimes.length === 0) return "0 min";
-  
+
     const avg = waitingTimes.reduce((sum, time) => sum + time, 0) / waitingTimes.length;
     return `${Math.round(avg)} min`;
   };
-  
+
     // Announce the queue number
   const announceQueueNumber = (queueNumber) => {
     if ("speechSynthesis" in window) {
@@ -161,48 +161,48 @@ function DoctorDashboard() {
           return digit;
         })
         .join(" ");
-  
+
       // Play "ding dong" sound
       const audio = new Audio('/sounds/minimalist-ding-dong.wav');
       // const audio = new Audio('/sounds/ding-dong.wav');
       audio.play();
-  
+
       // Wait for the sound to finish before speaking
       audio.onended = () => {
         // English announcement
         // const englishUtterance = new SpeechSynthesisUtterance(`Now serving ${formattedQueueNumber}`);
         const englishUtterance = new SpeechSynthesisUtterance(`${formattedQueueNumber}`);
         englishUtterance.lang = "en-US";
-        englishUtterance.rate = 0.1; // Slower pace
-  
+        englishUtterance.rate = 0.3; // Slower pace
+
         // Malay announcement
         // const malayUtterance = new SpeechSynthesisUtterance(`Sekarang nombor ${queueNumber}`);
         const malayUtterance = new SpeechSynthesisUtterance(`${queueNumber}`);
         malayUtterance.lang = "ms-MY";
-        malayUtterance.rate = 0.1; // Slower pace
-  
+        malayUtterance.rate = 0.3; // Slower pace
+
         // Queue announcements
         window.speechSynthesis.speak(englishUtterance);
         window.speechSynthesis.speak(malayUtterance);
       };
     }
   };
-  
+
   const handleRepeatCall = async () => {
     // Find the current patient in consultation
     const inConsultationPatient = tableData.find(
       (patient) => patient.status.toLowerCase() === "in consultation"
     );
-  
+
     if (!inConsultationPatient) {
       alert("No patient is currently in consultation to repeat the call.");
       return;
     }
-  
+
     try {
       // Announce the queue number
       announceQueueNumber(inConsultationPatient.queueNo);
-  
+
       alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
     } catch (error) {
       console.error("Error during repeat call:", error);
@@ -210,6 +210,8 @@ function DoctorDashboard() {
     }
   };
 
+  // It fetches a list of diagnoses from the "diagnoses" collection in Firestore.
+  // The fetched data (diagnoses names) is stored in the diagnosisList state using setDiagnosisList.
   useEffect(() => {
     const fetchDiagnoses = async () => {
       try {
@@ -223,6 +225,8 @@ function DoctorDashboard() {
     fetchDiagnoses();
   }, []);
   
+  // provides real-time suggestions for diagnoses based on a query.
+  // filtered list is stored in the diagnosisSuggestions state using setDiagnosisSuggestions
   const fetchDiagnosisSuggestions = (query) => {
     if (!query) {
       setDiagnosisSuggestions([]);
@@ -248,7 +252,8 @@ function DoctorDashboard() {
     setDiagnoses((prev) => prev.filter((_, i) => i !== index));
   };
   
-  // Medicines
+  // Fetches a list of medicines from the "medicines" collection in Firestore.
+  // Stores the fetched medicine names in the medicineList state using setMedicineList
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
@@ -262,10 +267,13 @@ function DoctorDashboard() {
         console.error("Error fetching medicines:", error);
       }
     };
-  
+
     fetchMedicines();
   }, []);  
 
+  // Provides real-time medicine suggestions based on the user's query
+  // Filters medicineList to include medicines whose names start with the query (case-insensitive) and limits the suggestions to 10
+  // Updates the filtered suggestions in the medicineSuggestions state using setMedicineSuggestions
   const fetchMedicineSuggestions = (query) => {
     if (!query) {
       setMedicineSuggestions([]);
@@ -293,16 +301,16 @@ function DoctorDashboard() {
 
   const handleCallNextPatient = async () => {
     const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
-  
+
     if (!nextPatient) {
       alert("No patients are waiting.");
       return;
     }
-  
+
     try {
       const patientDoc = doc(db, "queue", nextPatient.id);
       await updateDoc(patientDoc, { status: "In Consultation" });
-  
+
       setTableData((prev) =>
         prev.map((item) =>
           item.id === nextPatient.id
@@ -310,10 +318,10 @@ function DoctorDashboard() {
             : item
         )
       );
-  
+
       // Announce the queue number
       announceQueueNumber(nextPatient.queueNo);
-  
+
       alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
     } catch (error) {
       console.error("Error updating patient status:", error);
@@ -373,15 +381,16 @@ function DoctorDashboard() {
   // Save consultation details
   const handleSave = async () => {
     if (!popupPatient) return;
-  
+
     const dataToSave = {
-      diagnosis: selectedDiagnosis,
+      // diagnosis: selectedDiagnosis,
+      diagnosis: diagnoses,
       notes: additionalNotes,
       mc: mcYes ? { start: mcDates.start, end: mcDates.end } : null,
       amount: mcAmount,
       medicines,
     };
-  
+
     try {
       const patientDoc = doc(db, "queue", popupPatient.id);
       await updateDoc(patientDoc, { consultationData: dataToSave, status: "Completed" });
@@ -398,12 +407,13 @@ function DoctorDashboard() {
       alert("Failed to save consultation details. Please try again.");
     }
   };
-    
+
 
   // Close the consultation popup
   const closePopup = () => {
     setPopupPatient(null);
-    setSelectedDiagnosis("");
+    // setSelectedDiagnosis("");
+    setDiagnoses([{ name: "" }]);
     setAdditionalNotes("");
     setMcYes(false);
     setMcDates({ start: "", end: "" });
@@ -416,11 +426,11 @@ function DoctorDashboard() {
     try {
       const patientDoc = doc(db, "queue", patient.id);
       await updateDoc(patientDoc, { status: "Completed" });
-  
+
       const updatedTableData = tableData.map((item) =>
         item.id === patient.id ? { ...item, status: "Completed" } : item
       );
-  
+
       setTableData(updatedTableData);
       updateWidgets(updatedTableData); // Dynamically recalculate widgets
     } catch (error) {
@@ -428,9 +438,9 @@ function DoctorDashboard() {
       alert("Failed to update the patient status. Please try again.");
     }
   };
-      
-  
-  
+
+
+
   return (
     // must have this style={{ marginLeft: "0", paddingLeft: "0" }} to remain original layout
     <div className="content-wrapper" style={{ marginLeft: "0", paddingLeft: "0" }}>
@@ -459,6 +469,7 @@ function DoctorDashboard() {
                 </div>
               </div>
             </div>
+
             {/* Completed Appointments Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box" style={{ backgroundColor: "#28a745", color: "#fff" }}>
@@ -471,6 +482,7 @@ function DoctorDashboard() {
                 </div>
               </div>
             </div>
+
             {/* Pending Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box bg-warning"> {/* Retain bg-warning */}
@@ -483,6 +495,7 @@ function DoctorDashboard() {
                 </div>
               </div>
             </div>
+
             {/* Average Waiting Time Widget */}
             <div className="col-lg-3 col-6">
               <div className="small-box bg-secondary"> {/* Retain bg-secondary */}
@@ -496,6 +509,7 @@ function DoctorDashboard() {
               </div>
             </div>
           </div>
+
           {/* Patient Table Section */}
           <div className="row mt-4">
             <div className="col-12">
@@ -680,7 +694,7 @@ function DoctorDashboard() {
                       }}
                       className="form-control"
               />
-              
+
             {console.log("Current Suggestions:", medicineSuggestions)}
             {/* Render suggestions */}
             {medicineSuggestions.length > 0 && (
@@ -700,7 +714,6 @@ function DoctorDashboard() {
               </div>
             )}
             </div>
-
             {/* Dosage */}
             <input
               type="text"
@@ -807,5 +820,6 @@ function DoctorDashboard() {
     </div>
   );
 }
+
 
 export default DoctorDashboard;
