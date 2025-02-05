@@ -6,6 +6,7 @@ import "./Dashboard.css"; // CSS for maintaining the original layout
 
 function DoctorDashboard() {
   const [tableData, setTableData] = useState([]); // Patient data
+  const [currentCalledPatient, setCurrentCalledPatient] = useState(null); // Track the current called patient
 
   const [stats, setStats] = useState({
     newPatients: 0,
@@ -189,27 +190,6 @@ function DoctorDashboard() {
     }
   };
 
-  const handleRepeatCall = async () => {
-    // Find the current patient in consultation
-    const inConsultationPatient = tableData.find(
-      (patient) => patient.status.toLowerCase() === "waiting"
-    );
-
-    if (!inConsultationPatient) {
-      alert("No patient is currently in consultation to repeat the call.");
-      return;
-    }
-
-    try {
-      // Announce the queue number
-      announceQueueNumber(inConsultationPatient.queueNo);
-
-      alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
-    } catch (error) {
-      console.error("Error during repeat call:", error);
-      alert("Failed to repeat the call. Please try again.");
-    }
-  };
 
   // It fetches a list of diagnoses from the "diagnoses" collection in Firestore.
   // The fetched data (diagnoses names) is stored in the diagnosisList state using setDiagnosisList.
@@ -300,61 +280,7 @@ function DoctorDashboard() {
     setMedicines((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // const handleCallNextPatient = async () => {
-  //   const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
 
-  //   if (!nextPatient) {
-  //     alert("No patients are waiting.");
-  //     return;
-  //   }
-
-  //   try {
-  //     const patientDoc = doc(db, "queue", nextPatient.id);
-  //     await updateDoc(patientDoc, { status: "In Consultation" });
-
-  //     setTableData((prev) =>
-  //       prev.map((item) =>
-  //         item.id === nextPatient.id
-  //           ? { ...item, status: "In Consultation" }
-  //           : item
-  //       )
-  //     );
-
-  //     // Announce the queue number
-  //     announceQueueNumber(nextPatient.queueNo);
-
-  //     alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
-  //   } catch (error) {
-  //     console.error("Error updating patient status:", error);
-  //     alert("Failed to update the next patient's status. Please try again.");
-  //   }
-  // };
-
-
-  // const handleCallNextPatient = async () => {
-  //   const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
-  
-  //   if (!nextPatient) {
-  //     alert("No patients are waiting.");
-  //     return;
-  //   }
-  
-  //   try {
-  //     // Update the queue in Firestore
-  //     const patientDoc = doc(db, "queue", nextPatient.id);
-  //     await updateDoc(patientDoc, { status: "In Consultation" });
-  
-  //     // Update the currentServing document
-  //     const currentServingDoc = doc(db, "currentServing", "currentServingId"); // Replace with your document ID
-  //     await updateDoc(currentServingDoc, { queueNumber: nextPatient.queueNo });
-  
-  //     alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
-  //   } catch (error) {
-  //     console.error("Error updating patient status:", error);
-  //     alert("Failed to update the next patient's status. Please try again.");
-  //   }
-  // };
-  
 
   // Calculate patient's age based on DOB
   const calculateAge = (dob) => {
@@ -386,12 +312,39 @@ function DoctorDashboard() {
     }
   
     try {
+      // Set the current called patient
+      setCurrentCalledPatient(nextPatient);
+  
       // Announce the queue number
       announceQueueNumber(nextPatient.queueNo);
+  
       alert(`Calling Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}).`);
     } catch (error) {
       console.error("Error during call next patient:", error);
       alert("Failed to call the next patient. Please try again.");
+    }
+  };
+  
+
+  const handleRepeatCall = async () => {
+    // Find the current patient in consultation
+    const inConsultationPatient = tableData.find(
+      (patient) => patient.status.toLowerCase() === "waiting"
+    );
+
+    if (!inConsultationPatient) {
+      alert("No patient is currently in consultation to repeat the call.");
+      return;
+    }
+
+    try {
+      // Announce the queue number
+      announceQueueNumber(inConsultationPatient.queueNo);
+
+      alert(`Repeating call for Patient ${inConsultationPatient.name} (Queue No: ${inConsultationPatient.queueNo}).`);
+    } catch (error) {
+      console.error("Error during repeat call:", error);
+      alert("Failed to repeat the call. Please try again.");
     }
   };
   
@@ -415,19 +368,19 @@ function DoctorDashboard() {
   
   const handleTimeOut = async (patient) => {
     try {
+      const now = new Date().toLocaleTimeString();
       const patientDoc = doc(db, "queue", patient.id);
-      await updateDoc(patientDoc, { status: "Completed", timeOut: new Date().toLocaleTimeString() });
+      await updateDoc(patientDoc, { status: "Completed", timeOut: now });
   
       setTableData((prev) =>
         prev.map((item) =>
-          item.id === patient.id ? { ...item, status: "Completed", timeOut: new Date().toLocaleTimeString() } : item
+          item.id === patient.id ? { ...item, status: "Completed", timeOut: now } : item
         )
       );
   
-      // Automatically prepare the next patient in queue
-      const nextWaitingPatient = tableData.find((p) => p.status.toLowerCase() === "waiting");
-      if (nextWaitingPatient) {
-        alert(`Next patient in queue is ${nextWaitingPatient.name} (Queue No: ${nextWaitingPatient.queueNo}).`);
+      // Reset the current called patient if their status is now completed
+      if (currentCalledPatient?.id === patient.id) {
+        setCurrentCalledPatient(null);
       }
   
       alert(`Patient ${patient.name} (Queue No: ${patient.queueNo}) has completed consultation.`);
@@ -436,6 +389,7 @@ function DoctorDashboard() {
       alert("Failed to mark time out. Please try again.");
     }
   };
+  
   
   const isCallNextEnabled = tableData.some((patient) => patient.status.toLowerCase() === "waiting");
   const isRepeatCallEnabled = isCallNextEnabled;
@@ -589,7 +543,7 @@ function DoctorDashboard() {
                   <button
                     className="btn btn-primary"
                     onClick={handleCallNextPatient}
-                    disabled={!isCallNextEnabled}
+                    disabled={!!currentCalledPatient || !isCallNextEnabled}  // Button is disabled if a patient is being called
                   >
                     Call Next Patient
                   </button>
@@ -600,7 +554,7 @@ function DoctorDashboard() {
                   <button
                     className="btn btn-primary"
                     onClick={handleRepeatCall}
-                    disabled={!isRepeatCallEnabled}
+                    disabled={!currentCalledPatient} // Button is enabled only if a patient is being called
                   >
                     Repeat Call
                   </button>

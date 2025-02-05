@@ -20,9 +20,8 @@
     gap: 30px;
     margin: auto;
     margin-top: 20px;
-    margin-left: 250px; /* Matches the sidebar width */
     padding: 20px;
-    width: calc(100% - 250px); /* Adjust content width - Account for sidebar width */
+    background-color: white;
   }
   
   .diag-med .manage-section {
