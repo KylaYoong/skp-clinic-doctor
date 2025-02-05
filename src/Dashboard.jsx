@@ -192,7 +192,7 @@ function DoctorDashboard() {
   const handleRepeatCall = async () => {
     // Find the current patient in consultation
     const inConsultationPatient = tableData.find(
-      (patient) => patient.status.toLowerCase() === "in consultation"
+      (patient) => patient.status.toLowerCase() === "waiting"
     );
 
     if (!inConsultationPatient) {
@@ -300,35 +300,35 @@ function DoctorDashboard() {
     setMedicines((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleCallNextPatient = async () => {
-    const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
+  // const handleCallNextPatient = async () => {
+  //   const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
 
-    if (!nextPatient) {
-      alert("No patients are waiting.");
-      return;
-    }
+  //   if (!nextPatient) {
+  //     alert("No patients are waiting.");
+  //     return;
+  //   }
 
-    try {
-      const patientDoc = doc(db, "queue", nextPatient.id);
-      await updateDoc(patientDoc, { status: "In Consultation" });
+  //   try {
+  //     const patientDoc = doc(db, "queue", nextPatient.id);
+  //     await updateDoc(patientDoc, { status: "In Consultation" });
 
-      setTableData((prev) =>
-        prev.map((item) =>
-          item.id === nextPatient.id
-            ? { ...item, status: "In Consultation" }
-            : item
-        )
-      );
+  //     setTableData((prev) =>
+  //       prev.map((item) =>
+  //         item.id === nextPatient.id
+  //           ? { ...item, status: "In Consultation" }
+  //           : item
+  //       )
+  //     );
 
-      // Announce the queue number
-      announceQueueNumber(nextPatient.queueNo);
+  //     // Announce the queue number
+  //     announceQueueNumber(nextPatient.queueNo);
 
-      alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
-    } catch (error) {
-      console.error("Error updating patient status:", error);
-      alert("Failed to update the next patient's status. Please try again.");
-    }
-  };
+  //     alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
+  //   } catch (error) {
+  //     console.error("Error updating patient status:", error);
+  //     alert("Failed to update the next patient's status. Please try again.");
+  //   }
+  // };
 
 
   // const handleCallNextPatient = async () => {
@@ -377,33 +377,71 @@ function DoctorDashboard() {
     setPopupPatient(patient);
   };
 
-  // Mark patient's time-in
+  const handleCallNextPatient = async () => {
+    const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
+  
+    if (!nextPatient) {
+      alert("No patients are waiting.");
+      return;
+    }
+  
+    try {
+      // Announce the queue number
+      announceQueueNumber(nextPatient.queueNo);
+      alert(`Calling Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}).`);
+    } catch (error) {
+      console.error("Error during call next patient:", error);
+      alert("Failed to call the next patient. Please try again.");
+    }
+  };
+  
   const handleTimeIn = async (patient) => {
-    const now = new Date().toLocaleTimeString();
     try {
       const patientDoc = doc(db, "queue", patient.id);
-      await updateDoc(patientDoc, { timeIn: now });
+      await updateDoc(patientDoc, { status: "In Consultation", timeIn: new Date().toLocaleTimeString() });
+  
       setTableData((prev) =>
-        prev.map((item) => (item.id === patient.id ? { ...item, timeIn: now } : item))
+        prev.map((item) =>
+          item.id === patient.id ? { ...item, status: "In Consultation", timeIn: new Date().toLocaleTimeString() } : item
+        )
       );
+  
+      alert(`Patient ${patient.name} (Queue No: ${patient.queueNo}) has started consultation.`);
     } catch (error) {
-      console.error("Error updating Time In:", error);
+      console.error("Error during time in:", error);
+      alert("Failed to mark time in. Please try again.");
     }
   };
-
-  // Mark patient's time-out
+  
   const handleTimeOut = async (patient) => {
-    const now = new Date().toLocaleTimeString();
     try {
       const patientDoc = doc(db, "queue", patient.id);
-      await updateDoc(patientDoc, { timeOut: now });
+      await updateDoc(patientDoc, { status: "Completed", timeOut: new Date().toLocaleTimeString() });
+  
       setTableData((prev) =>
-        prev.map((item) => (item.id === patient.id ? { ...item, timeOut: now } : item))
+        prev.map((item) =>
+          item.id === patient.id ? { ...item, status: "Completed", timeOut: new Date().toLocaleTimeString() } : item
+        )
       );
+  
+      // Automatically prepare the next patient in queue
+      const nextWaitingPatient = tableData.find((p) => p.status.toLowerCase() === "waiting");
+      if (nextWaitingPatient) {
+        alert(`Next patient in queue is ${nextWaitingPatient.name} (Queue No: ${nextWaitingPatient.queueNo}).`);
+      }
+  
+      alert(`Patient ${patient.name} (Queue No: ${patient.queueNo}) has completed consultation.`);
     } catch (error) {
-      console.error("Error updating Time Out:", error);
+      console.error("Error during time out:", error);
+      alert("Failed to mark time out. Please try again.");
     }
   };
+  
+  const isCallNextEnabled = tableData.some((patient) => patient.status.toLowerCase() === "waiting");
+  const isRepeatCallEnabled = isCallNextEnabled;
+  const isTimeInEnabled = (patient) => patient.status.toLowerCase() === "waiting";
+  const isTimeOutEnabled = (patient) => patient.status.toLowerCase() === "in consultation";
+  
 
   // Save consultation details
   const handleSave = async () => {
@@ -551,6 +589,7 @@ function DoctorDashboard() {
                   <button
                     className="btn btn-primary"
                     onClick={handleCallNextPatient}
+                    disabled={!isCallNextEnabled}
                   >
                     Call Next Patient
                   </button>
@@ -561,6 +600,7 @@ function DoctorDashboard() {
                   <button
                     className="btn btn-primary"
                     onClick={handleRepeatCall}
+                    disabled={!isRepeatCallEnabled}
                   >
                     Repeat Call
                   </button>
@@ -604,6 +644,7 @@ function DoctorDashboard() {
                               <button
                                 className="btn btn-info btn-sm"
                                 onClick={() => handleTimeIn(row)}
+                                // disabled={!isTimeInEnabled(row)}
                               >
                                 Time In
                               </button>
