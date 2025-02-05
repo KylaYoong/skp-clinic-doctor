@@ -466,7 +466,7 @@ function DoctorDashboard() {
       <div className="content-header">
         <div className="container-fluid">
           <h1 className="m-0" style={{ marginBottom: "20px" }}>
-            Welcome to SKP Clinic Doctor
+          Your Doctor Dashboard for SKP Clinic
           </h1>
         </div>
       </div>
