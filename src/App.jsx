@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import Dashboard from "./Dashboard";
+import DiagnosisMedicines from "./Diagnosis-Medicines"; 
 
 function App() {
   const location = useLocation();
@@ -30,6 +31,19 @@ function App() {
                   <p>Dashboard</p>
                 </Link>
               </li>
+
+              <li className="nav-item">
+                <Link
+                  to="/diagnosis-medicines"
+                  className={`nav-link ${
+                    location.pathname === "/diagnosis-medicines" ? "active" : ""
+                  }`}
+                >
+                  <i className="nav-icon fas fa-pills"></i>
+                  <p>Diagnosis & Medicines</p>
+                </Link>
+              </li>
+
             </ul>
           </nav>
         </div>
@@ -39,6 +53,7 @@ function App() {
       <div className="content-wrapper">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/diagnosis-medicines" element={<DiagnosisMedicines />} />
         </Routes>
       </div>
     </div>

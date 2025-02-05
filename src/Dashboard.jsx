@@ -3,6 +3,7 @@ import { collection, getDocs, updateDoc, doc, onSnapshot } from "firebase/firest
 import { db } from "./firebase-config";
 import "./Dashboard.css"; // CSS for maintaining the original layout
 
+
 function DoctorDashboard() {
   const [tableData, setTableData] = useState([]); // Patient data
 
@@ -328,6 +329,32 @@ function DoctorDashboard() {
       alert("Failed to update the next patient's status. Please try again.");
     }
   };
+
+
+  // const handleCallNextPatient = async () => {
+  //   const nextPatient = tableData.find((patient) => patient.status.toLowerCase() === "waiting");
+  
+  //   if (!nextPatient) {
+  //     alert("No patients are waiting.");
+  //     return;
+  //   }
+  
+  //   try {
+  //     // Update the queue in Firestore
+  //     const patientDoc = doc(db, "queue", nextPatient.id);
+  //     await updateDoc(patientDoc, { status: "In Consultation" });
+  
+  //     // Update the currentServing document
+  //     const currentServingDoc = doc(db, "currentServing", "currentServingId"); // Replace with your document ID
+  //     await updateDoc(currentServingDoc, { queueNumber: nextPatient.queueNo });
+  
+  //     alert(`Patient ${nextPatient.name} (Queue No: ${nextPatient.queueNo}) is now in consultation.`);
+  //   } catch (error) {
+  //     console.error("Error updating patient status:", error);
+  //     alert("Failed to update the next patient's status. Please try again.");
+  //   }
+  // };
+  
 
   // Calculate patient's age based on DOB
   const calculateAge = (dob) => {
