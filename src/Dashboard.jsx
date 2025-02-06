@@ -24,6 +24,7 @@ function DoctorDashboard() {
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]); // Medicines list
   const [medicineSuggestions, setMedicineSuggestions] = useState([]);
   const [medicineList, setMedicineList] = useState([]);
+
   const [additionalNotes, setAdditionalNotes] = useState(""); // Notes from the doctor
   const [mcYes, setMcYes] = useState(false); // MC selection
   const [mcDates, setMcDates] = useState({ start: "", end: "" }); // MC dates
@@ -431,7 +432,6 @@ function DoctorDashboard() {
   // Close the consultation popup
   const closePopup = () => {
     setPopupPatient(null);
-    // setSelectedDiagnosis("");
     setDiagnoses([{ name: "" }]);
     setAdditionalNotes("");
     setMcYes(false);
@@ -699,7 +699,6 @@ function DoctorDashboard() {
               </button>
             </div>
 
-
             {/* Medicines */}
             <div className="form-group">
               <label>Medicines:</label>
@@ -736,6 +735,7 @@ function DoctorDashboard() {
               </div>
             )}
             </div>
+
             {/* Dosage */}
             <input
               type="text"
@@ -761,7 +761,6 @@ function DoctorDashboard() {
           Add Medicine
         </button>
       </div>
-
 
             {/* Additional Notes */}
             <div className="form-group">
